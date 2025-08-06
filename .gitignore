@@ -1,0 +1,24 @@
+# Entornos virtuales
+.venv/
+venv/
+
+# Archivos de Python compilados
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Carpetas de distribución (al empaquetar el proyecto)
+build/
+dist/
+*.egg-info/
+
+# Configs de sistema o IDE
+*.log
+*.DS_Store
+*.idea/
+.vscode/
+
+# Archivos temporales
+*.tmp
+*.bak
+*.swp
