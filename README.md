@@ -6,7 +6,7 @@
 
 ## Descripción
 
-PDF Splitter Cinnamoroll Version es una sencilla aplicación de escritorio para dividir archivos PDF por rango de páginas. Fue creada como una herramienta de ayuda para mi novia, para facilitarle la organización de sus libros de medicina.
+PDF Splitter Cinnamoroll Version es una sencilla aplicación de escritorio para dividir archivos PDF por rango de páginas. Fue creada como una herramienta para facilitar la organización de libros grandes en general.
 
 ---
 
@@ -27,3 +27,4 @@ Make sure you have Python installed (preferably 3.10+), and then install the req
 
 ```bash
 pip install -r requirements.txt
+
