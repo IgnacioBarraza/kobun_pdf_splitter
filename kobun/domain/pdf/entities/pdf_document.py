@@ -1,9 +1,10 @@
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 from uuid import uuid4, UUID
 
+from kobun.domain.pdf.exceptions.invalid_pdf_exception import InvalidPdfException
 from kobun.domain.pdf.value_objects.pdf_metadata import PdfMetadata
 
 
@@ -21,9 +22,9 @@ class PdfDocument:
     storage_path: str = field(init=True)
     file_size_bytes: int = field(init=True)
     checksum: str = field(init=True)
-    metadata: Optional[PdfMetadata] = None
+    metadata: PdfMetadata
 
-    uploaded_at: datetime = field(default_factory=datetime.utcnow)
+    uploaded_at: datetime = field(default_factory=datetime.now(timezone.utc))
     processed_at: Optional[datetime] = None
     page_count: Optional[int] = None
     status: PdfProcessingStatus = PdfProcessingStatus.UPLOADED
@@ -34,20 +35,21 @@ class PdfDocument:
         Ensures domain invariants at creation time.
         """
         if not self.filename.endswith(".pdf"):
-            raise ValueError("Filename must end with .pdf")
+            raise InvalidPdfException("Filename must end with .pdf")
 
         if self.file_size_bytes <= 0:
-            raise ValueError("File size must be greater than zero.")
+            raise InvalidPdfException("File size must be greater than zero.")
 
         if not self.checksum:
-            raise ValueError("Checksum cannot be empty.")
+            raise InvalidPdfException("Checksum cannot be empty.")
+
 
     def mark_as_processing(self) -> None:
         """
         Marks the document as currently being processed.
         """
         if self.status != PdfProcessingStatus.UPLOADED:
-            raise ValueError("Only uploaded documents can start processing.")
+            raise InvalidPdfException("Only uploaded documents can start processing.")
         self.status = PdfProcessingStatus.PROCESSING
 
     def mark_as_processed(self, page_count: int) -> None:
@@ -57,7 +59,7 @@ class PdfDocument:
         :param page_count: Total number of pages detected.
         """
         if self.status != PdfProcessingStatus.PROCESSING:
-            raise ValueError("Document must be processing before marking as processed.")
+            raise InvalidPdfException("Document must be processing before marking as processed.")
 
         self.status = PdfProcessingStatus.PROCESSED
         self.page_count = page_count
@@ -74,7 +76,7 @@ class PdfDocument:
         Business rule for renaming a document.
         """
         if not new_filename.endswith(".pdf"):
-            raise ValueError("Filename must end with .pdf")
+            raise InvalidPdfException("Filename must end with .pdf")
         self.filename = new_filename
 
     def __eq__(self, other: object) -> bool:
