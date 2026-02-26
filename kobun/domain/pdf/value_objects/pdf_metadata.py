@@ -26,7 +26,8 @@ class PdfMetadata:
         self._validate_non_empty_string(self.keywords, "keywords")
         self._validate_non_empty_string(self.creator, "creator")
         self._validate_non_empty_string(self.producer, "producer")
-        self._validate_non_empty_string(self.creation_date)
+        self._validate_create_date(self.creation_date)
+        self._validate_not_empty()
 
     def _validate_non_empty_string(self, value: Optional[str], field_name: str) -> None:
         if value is not None and not value.strip():

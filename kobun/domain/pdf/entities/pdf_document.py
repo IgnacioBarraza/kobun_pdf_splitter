@@ -63,7 +63,7 @@ class PdfDocument:
 
         self.status = PdfProcessingStatus.PROCESSED
         self.page_count = page_count
-        self.processed_at = datetime.utcnow()
+        self.processed_at = datetime.now(timezone.utc)
 
     def mark_as_failed(self) -> None:
         """
