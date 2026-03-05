@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
+from pathlib import Path
 from typing import Optional
 from uuid import uuid4, UUID
 
@@ -19,12 +20,12 @@ class PdfProcessingStatus(str, Enum):
 @dataclass(eq=False, slots=True)
 class PdfDocument:
     filename: str = field(init=True)
-    storage_path: str = field(init=True)
-    file_size_bytes: int = field(init=True)
+    storage_path: Path = field(init=True)
+    size_bytes: int = field(init=True)
     checksum: str = field(init=True)
     metadata: PdfMetadata
 
-    uploaded_at: datetime = field(default_factory=datetime.now(timezone.utc))
+    uploaded_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     processed_at: Optional[datetime] = None
     page_count: Optional[int] = None
     status: PdfProcessingStatus = PdfProcessingStatus.UPLOADED
@@ -37,7 +38,7 @@ class PdfDocument:
         if not self.filename.endswith(".pdf"):
             raise InvalidPdfException("Filename must end with .pdf")
 
-        if self.file_size_bytes <= 0:
+        if self.size_bytes <= 0:
             raise InvalidPdfException("File size must be greater than zero.")
 
         if not self.checksum:
@@ -75,7 +76,7 @@ class PdfDocument:
         """
         Business rule for renaming a document.
         """
-        if not new_filename.endswith(".pdf"):
+        if not new_filename.lower().endswith(".pdf"):
             raise InvalidPdfException("Filename must end with .pdf")
         self.filename = new_filename
 
