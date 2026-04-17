@@ -1,3 +1,4 @@
+import uuid
 from pathlib import Path
 from typing import List
 import hashlib
@@ -41,41 +42,38 @@ class PyMuPdfRepository(PdfRepository):
 
     def _build_pdf_document(self, file_path: Path) -> PdfDocument:
         """
-        Builds a PdfDocument entity from a file path.
-
-        :param file_path: Path to the PDF file.
-        :return: PdfDocument instance.
+        Builds a PdfDocument entity from a file path de forma segura.
         """
         doc = self.engine.open_document(file_path)
+        raw_meta = doc.metadata
 
-        metadata = doc.metadata
-        page_count = self.engine.get_page_count(doc)
+        title = raw_meta.get("title") or file_path.name
+        author = raw_meta.get("author") or "Unknown"
 
-        self.engine.close_document(doc)
-
-        pdf_document = PdfDocument(
-            filename=file_path.name,
-            storage_path=file_path,
-            size_bytes=file_path.stat().st_size,
-            checksum=self._calculate_checksum(file_path),
-            metadata=metadata
+        domain_metadata = PdfMetadata(
+            title=title,
+            author=author,
+            subject=raw_meta.get("subject") or "Unknown"
         )
 
-        pdf_document.page_count = page_count
+        page_count = self.engine.get_page_count(doc)
+        self.engine.close_document(doc)
 
-        return pdf_document
-
-    # =========================
-    # Public API
-    # =========================
+        return PdfDocument(
+            id=uuid.uuid4(),
+            filename=file_path.name,
+            storage_path=file_path,
+            metadata=domain_metadata,
+            page_count=page_count,
+            size_bytes=file_path.stat().st_size,
+            checksum=self._calculate_checksum(file_path),
+        )
 
     def open_document(self, file_path: Path) -> PdfDocument:
-        """
-        Opens a PDF and maps it to a domain entity.
 
-        :param file_path: Path to the PDF file.
-        :return: PdfDocument entity.
-        """
+        if not file_path.exists():
+            raise FileNotFoundError(f"No se encuentra el archivo: {file_path}")
+
         return self._build_pdf_document(file_path)
 
     def close_document(self, document: PdfDocument) -> None:
