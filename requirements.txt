@@ -1,0 +1,6 @@
+# Runtime
+PySide6>=6.6,<7
+pymupdf>=1.24,<2
+
+# Desarrollo
+pytest>=8.0
