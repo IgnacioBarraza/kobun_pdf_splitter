@@ -28,3 +28,50 @@ def test_page_range_error_with_negative_values():
 def test_page_range_string_representation():
     p_range = PageRange(start=5, end=15)
     assert str(p_range) == "5-15"
+
+
+def test_single_page_range_string_representation():
+    assert str(PageRange(start=7, end=7)) == "7"
+
+
+def test_parse_range():
+    assert PageRange.parse("1-5") == PageRange(start=1, end=5)
+
+
+def test_parse_single_page():
+    assert PageRange.parse("7") == PageRange(start=7, end=7)
+
+
+def test_parse_ignores_surrounding_whitespace():
+    assert PageRange.parse("  1 - 5 ") == PageRange(start=1, end=5)
+
+
+def test_parse_error_on_missing_bound():
+    with pytest.raises(InvalidPageRangeException, match="Invalid page number"):
+        PageRange.parse("1-")
+
+
+def test_parse_error_on_empty_text():
+    with pytest.raises(InvalidPageRangeException, match="cannot be empty"):
+        PageRange.parse("  ")
+
+
+def test_contains():
+    p_range = PageRange(start=5, end=10)
+    assert p_range.contains(5)
+    assert p_range.contains(10)
+    assert not p_range.contains(4)
+    assert not p_range.contains(11)
+
+
+def test_merge_contiguous_ranges():
+    assert PageRange(start=1, end=5).merge(PageRange(start=6, end=10)) == PageRange(start=1, end=10)
+
+
+def test_merge_overlapping_ranges():
+    assert PageRange(start=1, end=6).merge(PageRange(start=3, end=10)) == PageRange(start=1, end=10)
+
+
+def test_merge_error_on_disjoint_ranges():
+    with pytest.raises(InvalidPageRangeException, match="disjoint"):
+        PageRange(start=1, end=5).merge(PageRange(start=8, end=10))
