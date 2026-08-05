@@ -30,8 +30,14 @@ Ya disponibles (dominio + infraestructura):
 - Extract page ranges, including discontinuous selections: `1-5,10-15,20`
 - Overlapping or adjacent ranges are merged automatically — no duplicate pages
 - Output metadata derived from the source document, traceable back to it
+- Suggested output filename: `book.pdf` + `1-5,10-15` → `book_1-5_10-15.pdf`,
+  sanitized for Windows/macOS/Linux
+- Output never overwrites silently — `OverwritePolicy` (`FAIL` / `OVERWRITE` /
+  `RENAME`), and never writes over the source file
+- Rejects unreadable input before processing: missing files, directories,
+  empty files, non-PDFs, and password-protected PDFs
 - Strict domain validation for invalid page ranges
-- Explicit domain-level exceptions
+- Explicit domain-level exceptions — PyMuPDF errors never reach the caller
 
 En construcción (capa de presentación):
 
@@ -119,8 +125,14 @@ instalado.
 Desde código:
 
 ```python
+document = load_use_case.execute(Path("book.pdf"))          # valida el origen
 selection = PageSelection.parse("1-5,10-15")
-use_case.execute(Path("book.pdf"), Path("out.pdf"), selection)
+
+split_use_case.execute(document.storage_path, selection)     # destino sugerido
+split_use_case.execute(document.storage_path, selection, Path("out.pdf"))
+split_use_case.execute(                                      # sin fallar si existe
+    document.storage_path, selection, Path("out.pdf"), OverwritePolicy.RENAME
+)
 ```
 
 ---
@@ -141,6 +153,8 @@ use_case.execute(Path("book.pdf"), Path("out.pdf"), selection)
 
 - [x] Multiple range support (e.g., `1-5,10-15`)
 - [x] Automated tests for domain layer
+- [x] Output path selection with overwrite policy
+- [ ] Export history
 - [ ] Qt UI wired to the use cases
 - [ ] Light / dark theme system
 - [ ] Batch splitting
