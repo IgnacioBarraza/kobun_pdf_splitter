@@ -71,3 +71,41 @@ def test_split_metadata_reflects_discontinuous_selection(service, make_pdf_docum
     result = service.prepare_split_metadata(document, PageSelection.parse("1-5,10"))
 
     assert result.title == "Manual (1-5,10)"
+
+
+def test_suggested_filename_combines_stem_and_selection(service, make_pdf_document):
+    document = make_pdf_document(filename="book.pdf")
+
+    assert service.suggest_output_filename(document, PageSelection.parse("1-5")) == "book_1-5.pdf"
+
+
+def test_suggested_filename_replaces_commas_with_underscores(service, make_pdf_document):
+    document = make_pdf_document(filename="book.pdf")
+
+    result = service.suggest_output_filename(document, PageSelection.parse("1-5,10-15,20"))
+
+    assert result == "book_1-5_10-15_20.pdf"
+
+
+def test_suggested_filename_uses_canonical_selection(service, make_pdf_document):
+    """Rangos solapados se fusionan antes de nombrar, así que "1-5,3-8" da "1-8"."""
+    document = make_pdf_document(filename="book.pdf")
+
+    assert service.suggest_output_filename(document, PageSelection.parse("1-5,3-8")) == "book_1-8.pdf"
+
+
+def test_suggested_filename_strips_filesystem_hostile_characters(service, make_pdf_document):
+    document = make_pdf_document(filename='re:porte "final"?.pdf')
+
+    result = service.suggest_output_filename(document, PageSelection.parse("3"))
+
+    # Cada carácter inválido se reemplaza por uno "_", sin colapsar repeticiones:
+    # así el nombre resultante sigue siendo predecible a partir del original.
+    assert result == "re_porte _final___3.pdf"
+    assert not set(result) & set('<>:"/\\|?*')
+
+
+def test_suggested_filename_falls_back_when_stem_is_unusable(service, make_pdf_document):
+    document = make_pdf_document(filename=" .pdf")
+
+    assert service.suggest_output_filename(document, PageSelection.parse("7")) == "kobun_split_7.pdf"
