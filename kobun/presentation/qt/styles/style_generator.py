@@ -1,4 +1,4 @@
-from kobun.domain.pdf.value_objects.theme import AppTheme
+from kobun.shared.theme import AppTheme
 
 
 class StyleGenerator:

@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from kobun.domain.pdf.value_objects.theme import AppTheme
+from kobun.shared.theme import AppTheme
 
 
 class ThemeLoader:

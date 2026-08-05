@@ -53,17 +53,19 @@ class PdfDocument:
             raise InvalidPdfException("Only uploaded documents can start processing.")
         self.status = PdfProcessingStatus.PROCESSING
 
-    def mark_as_processed(self, page_count: int) -> None:
+    def mark_as_processed(self, page_count: Optional[int] = None) -> None:
         """
         Marks the document as successfully processed.
 
-        :param page_count: Total number of pages detected.
+        :param page_count: Total number of pages detected. Se omite cuando el
+            conteo ya se conocía al abrir el documento y no ha cambiado.
         """
         if self.status != PdfProcessingStatus.PROCESSING:
             raise InvalidPdfException("Document must be processing before marking as processed.")
 
         self.status = PdfProcessingStatus.PROCESSED
-        self.page_count = page_count
+        if page_count is not None:
+            self.page_count = page_count
         self.processed_at = datetime.now(timezone.utc)
 
     def mark_as_failed(self) -> None:
