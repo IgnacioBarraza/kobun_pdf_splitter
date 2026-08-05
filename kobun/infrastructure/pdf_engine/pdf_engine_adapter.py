@@ -28,6 +28,19 @@ class PdfEngineAdapter:
     def get_page_count(self, document: Document) -> int:
         return document.page_count
 
+    def needs_password(self, document: Document) -> bool:
+        """
+        True si el documento está cifrado y no se aportó la contraseña.
+        """
+        return bool(document.needs_pass)
+
+    def is_pdf(self, document: Document) -> bool:
+        """
+        PyMuPDF abre también XPS, EPUB, CBZ e imágenes. Kobun sólo trabaja con
+        PDFs, así que hay que preguntar explícitamente.
+        """
+        return bool(document.is_pdf)
+
     def extract_metadata(self, document: Document) -> Dict[str, Optional[str]]:
         return document.metadata
 

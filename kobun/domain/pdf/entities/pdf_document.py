@@ -35,7 +35,7 @@ class PdfDocument:
         """
         Ensures domain invariants at creation time.
         """
-        if not self.filename.endswith(".pdf"):
+        if not self.filename.lower().endswith(".pdf"):
             raise InvalidPdfException("Filename must end with .pdf")
 
         if self.size_bytes <= 0:
