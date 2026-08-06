@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from kobun.application.dto.split_pdf_request import SplitPdfRequest
 from kobun.application.services.output_path_resolver import OutputPathResolver
 from kobun.application.use_cases.load_pdf_use_case import LoadPdfUseCase
 from kobun.application.use_cases.split_pdf_use_case import SplitPdfUseCase
@@ -31,15 +32,16 @@ def run_test_cli(load_use_case: LoadPdfUseCase, split_use_case: SplitPdfUseCase)
         raw_output = input("Destino (Enter para el sugerido, o archivo .pdf / carpeta): ").strip()
 
         print("\nProcesando...")
-        result = split_use_case.execute(
+        response = split_use_case.execute(SplitPdfRequest(
             input_path=document.storage_path,
             selection=selection,
             output_path=Path(raw_output) if raw_output else None,
             policy=OverwritePolicy.RENAME,
-        )
+        ))
 
-        print(f"Listo: '{result.metadata.title}' con {result.page_count} páginas")
-        print(f"Guardado en: {result.storage_path}")
+        print(f"Listo: '{response.title}' con {response.page_count} páginas")
+        print(f"Guardado en: {response.output_path}")
+        print(f"Resumen: {response}")
 
     except Exception as e:
         print(f"\n[ERROR] {type(e).__name__}: {e}")
