@@ -9,6 +9,7 @@ import pytest
 
 pymupdf = pytest.importorskip("pymupdf", reason="PyMuPDF no instalado")
 
+from kobun.application.dto.split_pdf_request import SplitPdfRequest
 from kobun.application.services.output_path_resolver import OutputPathResolver
 from kobun.application.use_cases.load_pdf_use_case import LoadPdfUseCase
 from kobun.application.use_cases.split_pdf_use_case import SplitPdfUseCase
@@ -93,7 +94,7 @@ def labels(*numbers):
 def test_discontinuous_selection_extracts_exact_pages(use_case, source_pdf, tmp_path):
     output = tmp_path / "multi.pdf"
 
-    result = use_case.execute(source_pdf, PageSelection.parse("1-3,10,20-22"), output)
+    result = use_case.execute(SplitPdfRequest(source_pdf, PageSelection.parse("1-3,10,20-22"), output))
 
     assert read_pages(output) == labels(1, 2, 3, 10, 20, 21, 22)
     assert result.page_count == 7
@@ -102,7 +103,7 @@ def test_discontinuous_selection_extracts_exact_pages(use_case, source_pdf, tmp_
 def test_single_page_selection_is_not_off_by_one(use_case, source_pdf, tmp_path):
     output = tmp_path / "single.pdf"
 
-    use_case.execute(source_pdf, PageSelection.parse("17"), output)
+    use_case.execute(SplitPdfRequest(source_pdf, PageSelection.parse("17"), output))
 
     assert read_pages(output) == labels(17)
 
@@ -110,7 +111,7 @@ def test_single_page_selection_is_not_off_by_one(use_case, source_pdf, tmp_path)
 def test_overlapping_ranges_produce_no_duplicate_pages(use_case, source_pdf, tmp_path):
     output = tmp_path / "overlap.pdf"
 
-    use_case.execute(source_pdf, PageSelection.parse("1-5,3-8"), output)
+    use_case.execute(SplitPdfRequest(source_pdf, PageSelection.parse("1-5,3-8"), output))
 
     assert read_pages(output) == labels(1, 2, 3, 4, 5, 6, 7, 8)
 
@@ -118,7 +119,7 @@ def test_overlapping_ranges_produce_no_duplicate_pages(use_case, source_pdf, tmp
 def test_derived_metadata_is_written_to_the_output_file(use_case, source_pdf, tmp_path):
     output = tmp_path / "meta.pdf"
 
-    use_case.execute(source_pdf, PageSelection.parse("1-3,10"), output)
+    use_case.execute(SplitPdfRequest(source_pdf, PageSelection.parse("1-3,10"), output))
     metadata = read_metadata(output)
 
     assert metadata["title"] == "Libro Original (1-3,10)"
@@ -129,7 +130,7 @@ def test_derived_metadata_is_written_to_the_output_file(use_case, source_pdf, tm
 
 def test_selection_beyond_document_fails_with_domain_error(use_case, source_pdf, tmp_path):
     with pytest.raises(InvalidPageRangeException):
-        use_case.execute(source_pdf, PageSelection.parse("28-40"), tmp_path / "nope.pdf")
+        use_case.execute(SplitPdfRequest(source_pdf, PageSelection.parse("28-40"), tmp_path / "nope.pdf"))
 
 
 def test_engine_failure_is_not_masked_by_cleanup(source_pdf, tmp_path):
@@ -149,7 +150,7 @@ def test_engine_failure_is_not_masked_by_cleanup(source_pdf, tmp_path):
     )
 
     with pytest.raises(RuntimeError, match="fallo simulado del motor"):
-        use_case.execute(source_pdf, PageSelection.parse("1-2"), tmp_path / "boom.pdf")
+        use_case.execute(SplitPdfRequest(source_pdf, PageSelection.parse("1-2"), tmp_path / "boom.pdf"))
 
 
 def test_extract_text_is_one_based(repository, source_pdf):
@@ -348,20 +349,20 @@ def test_engine_exceptions_never_reach_the_caller(load_use_case, tmp_path):
 # =========================================================
 
 def test_default_output_lands_next_to_the_source_with_suggested_name(use_case, source_pdf):
-    result = use_case.execute(source_pdf, PageSelection.parse("1-3,10"))
+    result = use_case.execute(SplitPdfRequest(source_pdf, PageSelection.parse("1-3,10")))
 
-    assert result.storage_path == source_pdf.parent / "source_1-3_10.pdf"
-    assert read_pages(result.storage_path) == labels(1, 2, 3, 10)
+    assert result.output_path == source_pdf.parent / "source_1-3_10.pdf"
+    assert read_pages(result.output_path) == labels(1, 2, 3, 10)
 
 
 def test_output_directory_receives_the_suggested_name(use_case, source_pdf, tmp_path):
     destino = tmp_path / "exports"
     destino.mkdir()
 
-    result = use_case.execute(source_pdf, PageSelection.parse("5-6"), destino)
+    result = use_case.execute(SplitPdfRequest(source_pdf, PageSelection.parse("5-6"), destino))
 
-    assert result.storage_path == destino / "source_5-6.pdf"
-    assert read_pages(result.storage_path) == labels(5, 6)
+    assert result.output_path == destino / "source_5-6.pdf"
+    assert read_pages(result.output_path) == labels(5, 6)
 
 
 def test_existing_output_is_not_overwritten_by_default(use_case, source_pdf, tmp_path):
@@ -369,7 +370,7 @@ def test_existing_output_is_not_overwritten_by_default(use_case, source_pdf, tmp
     ocupado.write_bytes(b"contenido previo")
 
     with pytest.raises(InvalidOutputPathException, match="ya existe"):
-        use_case.execute(source_pdf, PageSelection.parse("1-2"), ocupado)
+        use_case.execute(SplitPdfRequest(source_pdf, PageSelection.parse("1-2"), ocupado))
 
     assert ocupado.read_bytes() == b"contenido previo", "El archivo previo debe quedar intacto"
 
@@ -378,11 +379,11 @@ def test_overwrite_policy_replaces_the_existing_file(use_case, source_pdf, tmp_p
     ocupado = tmp_path / "ocupado.pdf"
     ocupado.write_bytes(b"contenido previo")
 
-    result = use_case.execute(
+    result = use_case.execute(SplitPdfRequest(
         source_pdf, PageSelection.parse("1-2"), ocupado, OverwritePolicy.OVERWRITE
-    )
+    ))
 
-    assert result.storage_path == ocupado
+    assert result.output_path == ocupado
     assert read_pages(ocupado) == labels(1, 2)
 
 
@@ -390,22 +391,22 @@ def test_rename_policy_writes_beside_the_existing_file(use_case, source_pdf, tmp
     ocupado = tmp_path / "ocupado.pdf"
     ocupado.write_bytes(b"contenido previo")
 
-    result = use_case.execute(
+    result = use_case.execute(SplitPdfRequest(
         source_pdf, PageSelection.parse("1-2"), ocupado, OverwritePolicy.RENAME
-    )
+    ))
 
-    assert result.storage_path == tmp_path / "ocupado_1.pdf"
+    assert result.output_path == tmp_path / "ocupado_1.pdf"
     assert ocupado.read_bytes() == b"contenido previo"
-    assert read_pages(result.storage_path) == labels(1, 2)
+    assert read_pages(result.output_path) == labels(1, 2)
 
 
 def test_repeated_exports_with_rename_never_collide(use_case, source_pdf, tmp_path):
     destino = tmp_path / "cap.pdf"
 
     rutas = [
-        use_case.execute(
+        use_case.execute(SplitPdfRequest(
             source_pdf, PageSelection.parse("1-2"), destino, OverwritePolicy.RENAME
-        ).storage_path
+        )).output_path
         for _ in range(3)
     ]
 
@@ -417,14 +418,14 @@ def test_cannot_write_the_result_over_the_source_pdf(use_case, source_pdf):
     original = source_pdf.read_bytes()
 
     with pytest.raises(InvalidOutputPathException, match="mismo archivo de origen"):
-        use_case.execute(source_pdf, PageSelection.parse("1-2"), source_pdf)
+        use_case.execute(SplitPdfRequest(source_pdf, PageSelection.parse("1-2"), source_pdf))
 
     assert source_pdf.read_bytes() == original, "El PDF de origen no debe tocarse"
 
 
 def test_missing_output_directory_fails_before_processing(use_case, source_pdf, tmp_path):
     with pytest.raises(InvalidOutputPathException, match="no existe"):
-        use_case.execute(source_pdf, PageSelection.parse("1-2"), tmp_path / "nada" / "x.pdf")
+        use_case.execute(SplitPdfRequest(source_pdf, PageSelection.parse("1-2"), tmp_path / "nada" / "x.pdf"))
 
 
 def test_suggested_path_matches_what_execute_actually_writes(use_case, load_use_case, source_pdf):
@@ -432,6 +433,6 @@ def test_suggested_path_matches_what_execute_actually_writes(use_case, load_use_
     selection = PageSelection.parse("4-8,20")
 
     suggested = use_case.suggest_output_path(document, selection)
-    result = use_case.execute(source_pdf, selection)
+    result = use_case.execute(SplitPdfRequest(source_pdf, selection))
 
-    assert result.storage_path == suggested
+    assert result.output_path == suggested
