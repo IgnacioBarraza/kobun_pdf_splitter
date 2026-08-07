@@ -27,4 +27,8 @@ THEMES_DIRECTORY = Path(__file__).resolve().parent.parent / "themes"
 Se resuelve relativa al paquete y no al directorio de trabajo: de lo contrario
 la app sólo encuentra sus temas si se la lanza desde la raíz del proyecto."""
 
+THEME_ICONS_DIRECTORY = THEMES_DIRECTORY / "icons"
+"""Íconos que el QSS necesita como imagen, porque Qt no permite dibujarlos
+con estilos: la flecha de los desplegables es el caso típico."""
+
 DEFAULT_THEME_NAME = "light"

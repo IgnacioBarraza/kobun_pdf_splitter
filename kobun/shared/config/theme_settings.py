@@ -10,6 +10,21 @@ LIGHT_THEME = "light"
 DARK_THEME = "dark"
 
 AVAILABLE_THEMES: Tuple[str, ...] = (LIGHT_THEME, DARK_THEME)
+"""Temas que el usuario puede elegir. El botón de la ventana alterna entre
+estos dos."""
+
+PREVIEW_THEMES: Tuple[str, ...] = ("washi_shu", "ai_indigo", "matcha", "sumi")
+"""Paletas japonesas incluidas pero todavía no seleccionables.
+
+Se distribuyen para poder compararlas mientras se define la identidad visual.
+No están en AVAILABLE_THEMES a propósito: `is_known_theme` las rechaza, así
+que ni el toggle ni un preferences.json editado a mano pueden activarlas.
+
+Los tests las validan igual que a las demás; si no, serían archivos que nadie
+mira y que se pudren en silencio."""
+
+SHIPPED_THEMES: Tuple[str, ...] = AVAILABLE_THEMES + PREVIEW_THEMES
+"""Todos los JSON de tema que viajan con la aplicación."""
 
 
 def theme_file(name: str) -> Path:

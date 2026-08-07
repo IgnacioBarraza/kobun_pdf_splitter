@@ -112,6 +112,7 @@ class MainWindow(QMainWindow):
             document.filename,
             f"{document.page_count} páginas · {document.metadata.title}",
         )
+        self.ui.split_options.set_directory(document.storage_path.parent)
         self._set_status(f"{document.filename} listo para dividir.")
         self._refresh_actions()
 
@@ -124,7 +125,7 @@ class MainWindow(QMainWindow):
 
         selection = self._parse_selection()
         if selection is not None:
-            self.ui.split_options.set_suggested_output(
+            self.ui.split_options.set_suggested_destination(
                 self._view_model.suggested_output_path(selection)
             )
 
@@ -137,7 +138,7 @@ class MainWindow(QMainWindow):
         self._set_status("Procesando...")
         self._view_model.split(
             selection=selection,
-            output_path=self.ui.split_options.output_path,
+            output_path=self.ui.split_options.destination,
             policy=self.ui.split_options.policy,
         )
 
@@ -170,17 +171,38 @@ class MainWindow(QMainWindow):
         self.ui.list_history.clear()
 
         for entry in entries:
-            cuando = entry.record.created_at.astimezone().strftime("%d/%m/%Y %H:%M")
-            marca = "" if entry.is_available else "✗ "
-            item = QListWidgetItem(f"{marca}{cuando}   {entry.record}")
+            item = QListWidgetItem(self._history_label(entry))
             item.setData(RECORD_ROLE, entry)
-
-            if not entry.is_available:
-                item.setToolTip("El archivo ya no está en esta ubicación.")
+            item.setToolTip(self._history_detail(entry))
 
             self.ui.list_history.addItem(item)
 
         self._on_history_selection_changed()
+
+    @staticmethod
+    def _history_label(entry) -> str:
+        """
+        La lista muestra sólo el archivo generado: es lo que el usuario busca
+        cuando abre el historial. El origen y los rangos quedan en el tooltip.
+        """
+        cuando = entry.record.created_at.astimezone().strftime("%d/%m/%Y %H:%M")
+        marca = "" if entry.is_available else "✗ "
+
+        return f"{marca}{cuando}   {entry.record.output_filename}"
+
+    @staticmethod
+    def _history_detail(entry) -> str:
+        record = entry.record
+        lineas = [
+            f"Origen: {record.source_filename}",
+            f"Páginas: {record.selection}  ({record.page_count} en total)",
+            f"Ubicación: {record.output_path}",
+        ]
+
+        if not entry.is_available:
+            lineas.append("El archivo ya no está en esta ubicación.")
+
+        return "\n".join(lineas)
 
     def _on_history_selection_changed(self) -> None:
         entry = self._selected_entry()

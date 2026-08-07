@@ -1,0 +1,21 @@
+{
+    "name": "sumi",
+    "colors": {
+        "background": "#f6f4f1",
+        "surface": "#ffffff",
+        "surface_alt": "#eae7e2",
+        "primary": "#2f2b28",
+        "primary_hover": "#171412",
+        "border": "#e0dbd4",
+        "border_strong": "#bfb8ae",
+        "danger": "#b23a2f",
+        "success": "#4a6b52",
+        "muted": "#9c948a",
+        "text": {
+            "primary": "#1a1714",
+            "secondary": "#6b635a",
+            "inverse": "#ffffff",
+            "disabled": "#b5aca2"
+        }
+    }
+}

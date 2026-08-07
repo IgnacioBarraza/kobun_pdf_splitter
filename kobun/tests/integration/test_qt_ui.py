@@ -206,12 +206,47 @@ def test_the_suggested_output_appears_when_typing_a_range(window, qt_app, source
 
 def test_a_manual_destination_is_not_overwritten_by_the_suggestion(window, qt_app, source_pdf, tmp_path):
     load(window, qt_app, source_pdf)
-    elegido = str(tmp_path / "mio.pdf")
-    window.ui.split_options.input_output.setText(elegido)
+    window.ui.split_options.set_destination(tmp_path / "mio.pdf")
 
     window.ui.split_options.input_selection.setText("1-3")
 
-    assert window.ui.split_options.input_output.text() == elegido
+    assert window.ui.split_options.input_output.text() == "mio.pdf"
+
+
+def test_the_destination_field_shows_only_the_filename(window, qt_app, source_pdf):
+    load(window, qt_app, source_pdf)
+
+    window.ui.split_options.input_selection.setText("1-3,8")
+
+    assert window.ui.split_options.input_output.text() == "libro_1-3_8.pdf"
+    assert "/" not in window.ui.split_options.input_output.text()
+
+
+def test_the_folder_is_shown_separately(window, qt_app, source_pdf):
+    load(window, qt_app, source_pdf)
+
+    assert window.ui.split_options.label_folder.toolTip() == str(source_pdf.parent)
+    assert "Carpeta:" in window.ui.split_options.label_folder.text()
+
+
+def test_a_typed_name_lands_in_the_document_folder(window, qt_app, source_pdf):
+    load(window, qt_app, source_pdf)
+    window.ui.split_options.input_selection.setText("1-3")
+    window.ui.split_options.input_output.setText("capitulo uno.pdf")
+
+    assert window.ui.split_options.destination == source_pdf.parent / "capitulo uno.pdf"
+
+
+def test_a_typed_name_without_extension_still_works(window, qt_app, source_pdf):
+    """El campo pide un nombre, no una ruta: exigir ".pdf" sería un error evitable."""
+    load(window, qt_app, source_pdf)
+    window.ui.split_options.input_selection.setText("1-3")
+    window.ui.split_options.input_output.setText("capitulo uno")
+
+    window.ui.btn_process.click()
+    settle(qt_app)
+
+    assert (source_pdf.parent / "capitulo uno.pdf").exists()
 
 
 def test_splitting_writes_the_file_and_reports_success(window, qt_app, source_pdf):
@@ -273,7 +308,7 @@ def test_the_rename_policy_can_be_chosen_from_the_ui(window, qt_app, source_pdf,
 
     load(window, qt_app, source_pdf)
     window.ui.split_options.input_selection.setText("1-3")
-    window.ui.split_options.input_output.setText(str(ocupado))
+    window.ui.split_options.set_destination(ocupado)
     window.ui.split_options.set_policy(OverwritePolicy.RENAME)
 
     window.ui.btn_process.click()
@@ -294,7 +329,33 @@ def test_a_successful_split_appears_in_the_history(window, qt_app, source_pdf):
     settle(qt_app)
 
     assert window.ui.list_history.count() == 1
-    assert "libro.pdf [2-4]" in window.ui.list_history.item(0).text()
+    assert window.ui.list_history.item(0).text().endswith("libro_2-4.pdf")
+
+
+def test_the_history_row_shows_only_the_generated_file(window, qt_app, source_pdf):
+    load(window, qt_app, source_pdf)
+    window.ui.split_options.input_selection.setText("2-4")
+    window.ui.btn_process.click()
+    settle(qt_app)
+
+    texto = window.ui.list_history.item(0).text()
+
+    assert "libro_2-4.pdf" in texto
+    assert "->" not in texto, "El origen y la flecha ensuciaban la fila"
+    assert "[2-4]" not in texto
+
+
+def test_the_history_tooltip_keeps_the_full_detail(window, qt_app, source_pdf):
+    load(window, qt_app, source_pdf)
+    window.ui.split_options.input_selection.setText("2-4")
+    window.ui.btn_process.click()
+    settle(qt_app)
+
+    tooltip = window.ui.list_history.item(0).toolTip()
+
+    assert "libro.pdf" in tooltip
+    assert "2-4" in tooltip
+    assert "3 en total" in tooltip
 
 
 def test_deleted_exports_are_flagged_in_the_list(window, qt_app, source_pdf):
@@ -373,7 +434,7 @@ def test_a_failed_split_opens_a_dialog(window, qt_app, dialogs, source_pdf, tmp_
 
     load(window, qt_app, source_pdf)
     window.ui.split_options.input_selection.setText("1-3")
-    window.ui.split_options.input_output.setText(str(ocupado))
+    window.ui.split_options.set_destination(ocupado)
     window.ui.btn_process.click()
     settle(qt_app)
 

@@ -1,3 +1,4 @@
+from kobun.shared.config.app_settings import THEME_ICONS_DIRECTORY
 from kobun.shared.theme import AppTheme
 
 
@@ -8,6 +9,22 @@ class StyleGenerator:
     Todo el color de la aplicación sale de acá: los widgets no llevan estilos
     propios, así que alternar tema es reemplazar esta hoja y nada más.
     """
+
+    @staticmethod
+    def chevron_url(theme: AppTheme) -> str:
+        """
+        Ruta del ícono de flecha para los desplegables.
+
+        Qt no permite dibujar la flecha con estilos: `QComboBox::down-arrow`
+        sólo acepta una imagen. Se usa un gris neutro por variante clara u
+        oscura, que funciona con cualquier color de acento.
+
+        Se emite en formato posix porque QSS espera barras normales incluso
+        en Windows.
+        """
+        variant = "dark" if theme.is_dark else "light"
+
+        return (THEME_ICONS_DIRECTORY / f"chevron_{variant}.svg").as_posix()
 
     @staticmethod
     def generate(theme: AppTheme) -> str:
@@ -25,12 +42,19 @@ class StyleGenerator:
         text_secondary = theme.get_text_color("secondary")
         text_inverse = theme.get_text_color("inverse")
         text_disabled = theme.get_text_color("disabled", text_secondary)
+        chevron = StyleGenerator.chevron_url(theme)
 
         return f"""
         QWidget {{
             background-color: {bg};
             color: {text_primary};
             font-size: 13px;
+        }}
+
+        /* Sin esto los QLabel pintan el fondo general encima del panel que
+           los contiene, y se ve un recuadro alrededor de cada texto. */
+        QLabel {{
+            background: transparent;
         }}
 
         QFrame#MainContainer {{
@@ -134,14 +158,56 @@ class StyleGenerator:
             background-color: {surface};
             border: 1px solid {border};
             border-radius: 4px;
-            padding: 7px;
+            padding: 7px 10px;
+            /* Fuerza la lista estilable en vez del popup nativo del sistema. */
+            combobox-popup: 0;
+        }}
+
+        QComboBox:hover {{
+            border-color: {border_strong};
+        }}
+
+        QComboBox:focus {{
+            border-color: {primary};
+        }}
+
+        QComboBox::drop-down {{
+            subcontrol-origin: padding;
+            subcontrol-position: center right;
+            width: 30px;
+            border: none;
+            background: transparent;
+        }}
+
+        QComboBox::down-arrow {{
+            image: url("{chevron}");
+            width: 12px;
+            height: 12px;
         }}
 
         QComboBox QAbstractItemView {{
             background-color: {surface};
-            selection-background-color: {primary};
-            selection-color: {text_inverse};
-            border: 1px solid {border};
+            border: 1px solid {border_strong};
+            border-radius: 4px;
+            padding: 4px;
+            outline: none;
+        }}
+
+        /* Sin ::item las filas quedan apretadas y sin realce al pasar el mouse. */
+        QComboBox QAbstractItemView::item {{
+            min-height: 26px;
+            padding: 4px 8px;
+            border-radius: 3px;
+            color: {text_primary};
+        }}
+
+        QComboBox QAbstractItemView::item:hover {{
+            background-color: {surface_alt};
+        }}
+
+        QComboBox QAbstractItemView::item:selected {{
+            background-color: {primary};
+            color: {text_inverse};
         }}
 
         /* Zona de arrastre */

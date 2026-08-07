@@ -17,6 +17,8 @@ from kobun.shared.config.theme_settings import (
     AVAILABLE_THEMES,
     DARK_THEME,
     LIGHT_THEME,
+    PREVIEW_THEMES,
+    SHIPPED_THEMES,
     is_known_theme,
     opposite_theme,
     theme_file,
@@ -55,27 +57,57 @@ class FakeThemeSource(ThemeSource):
 # Catálogo de temas
 # =========================
 
-def test_shipped_themes_exist_and_are_loadable():
-    source = JsonThemeSource()
+@pytest.mark.parametrize("name", SHIPPED_THEMES)
+def test_shipped_themes_exist_and_are_loadable(name):
+    """Incluye las paletas de vista previa: si se rompen, nadie se enteraría."""
+    theme = JsonThemeSource().load(name)
 
-    for name in AVAILABLE_THEMES:
-        theme = source.load(name)
-        assert theme.name == name
+    assert theme.name == name
 
 
-def test_shipped_themes_define_every_token_the_stylesheet_uses():
+@pytest.mark.parametrize("name", SHIPPED_THEMES)
+def test_shipped_themes_define_every_token_the_stylesheet_uses(name):
     """
     Regresión: los JSON estuvieron vacíos y la ventana no podía pintarse.
     """
-    requeridos = {"background", "surface", "surface_alt", "primary", "primary_hover", "border"}
+    requeridos = {
+        "background", "surface", "surface_alt", "primary", "primary_hover",
+        "border", "border_strong", "danger", "success",
+    }
     requeridos_texto = {"primary", "secondary", "inverse", "disabled"}
 
-    for name in AVAILABLE_THEMES:
-        data = json.loads(theme_file(name).read_text(encoding="utf-8"))
-        colores = data["colors"]
+    colores = json.loads(theme_file(name).read_text(encoding="utf-8"))["colors"]
 
-        assert requeridos <= colores.keys(), f"faltan tokens en {name}"
-        assert requeridos_texto <= colores["text"].keys(), f"faltan tokens de texto en {name}"
+    assert requeridos <= colores.keys(), f"faltan tokens en {name}"
+    assert requeridos_texto <= colores["text"].keys(), f"faltan tokens de texto en {name}"
+
+
+@pytest.mark.parametrize("name", PREVIEW_THEMES)
+def test_preview_themes_are_shipped_but_not_selectable(name):
+    """
+    Están en el paquete para poder compararlas, pero fuera del selector: ni el
+    toggle ni un preferences.json editado a mano deberían poder activarlas.
+    """
+    assert theme_file(name).exists()
+    assert not is_known_theme(name)
+    assert name not in AVAILABLE_THEMES
+
+
+@pytest.mark.parametrize("name", PREVIEW_THEMES)
+def test_selecting_a_preview_theme_falls_back_to_the_default(name):
+    preferences = InMemoryPreferences()
+    service = ThemeService(preferences, JsonThemeSource())
+
+    assert service.select(name).name == DEFAULT_THEME_NAME
+    assert preferences.preferences.theme_name == DEFAULT_THEME_NAME
+
+
+def test_toggling_never_reaches_a_preview_theme():
+    service = ThemeService(InMemoryPreferences(), JsonThemeSource())
+
+    vistos = {service.toggle().name for _ in range(6)}
+
+    assert vistos == set(AVAILABLE_THEMES)
 
 
 def test_theme_paths_are_package_relative():
