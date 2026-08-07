@@ -1,5 +1,8 @@
+import os
+
 import pytest
 
+from kobun.domain.pdf.exceptions.file_open_exception import FileOpenException
 from kobun.domain.pdf.exceptions.invalid_output_path_exception import InvalidOutputPathException
 from kobun.infrastructure.filesystem.local_file_storage import LocalFileStorage
 
@@ -82,3 +85,103 @@ def test_unique_path_preserves_suffix_and_parent(storage, tmp_path):
 
     assert resultado.parent == sub
     assert resultado.name == "book_1-5_1.pdf"
+
+
+# =========================
+# Apertura con la app del sistema
+# =========================
+
+class SpawnRecorder:
+    """Reemplaza el lanzamiento real de procesos y registra el comando."""
+
+    def __init__(self, error: Exception = None):
+        self.commands = []
+        self._error = error
+
+    def __call__(self, command):
+        self.commands.append(list(command))
+        if self._error is not None:
+            raise self._error
+
+
+@pytest.fixture
+def archivo(tmp_path):
+    ruta = tmp_path / "export.pdf"
+    ruta.write_bytes(b"%PDF")
+    return ruta
+
+
+def test_linux_uses_xdg_open(archivo):
+    recorder = SpawnRecorder()
+
+    LocalFileStorage(platform="linux", spawn=recorder).open_in_default_app(archivo)
+
+    assert recorder.commands == [["xdg-open", str(archivo)]]
+
+
+def test_macos_uses_open(archivo):
+    recorder = SpawnRecorder()
+
+    LocalFileStorage(platform="darwin", spawn=recorder).open_in_default_app(archivo)
+
+    assert recorder.commands == [["open", str(archivo)]]
+
+
+def test_windows_uses_the_system_api_not_a_command(archivo, monkeypatch):
+    llamadas = []
+    monkeypatch.setattr(os, "startfile", llamadas.append, raising=False)
+    recorder = SpawnRecorder()
+
+    LocalFileStorage(platform="win32", spawn=recorder).open_in_default_app(archivo)
+
+    assert llamadas == [str(archivo)]
+    assert recorder.commands == [], "Windows no debe pasar por subprocess"
+
+
+def test_missing_file_is_reported_before_launching_anything(tmp_path):
+    recorder = SpawnRecorder()
+    storage = LocalFileStorage(platform="linux", spawn=recorder)
+
+    with pytest.raises(FileOpenException, match="ya no está disponible"):
+        storage.open_in_default_app(tmp_path / "borrado.pdf")
+
+    assert recorder.commands == []
+
+
+def test_a_directory_cannot_be_opened_as_a_file(tmp_path):
+    carpeta = tmp_path / "carpeta.pdf"
+    carpeta.mkdir()
+
+    with pytest.raises(FileOpenException, match="ya no está disponible"):
+        LocalFileStorage(platform="linux", spawn=SpawnRecorder()).open_in_default_app(carpeta)
+
+
+def test_a_missing_opener_becomes_a_domain_exception(archivo):
+    """Un sistema sin xdg-open instalado no debe reventar con FileNotFoundError."""
+    recorder = SpawnRecorder(error=FileNotFoundError("xdg-open"))
+    storage = LocalFileStorage(platform="linux", spawn=recorder)
+
+    with pytest.raises(FileOpenException, match="No se pudo abrir 'export.pdf'"):
+        storage.open_in_default_app(archivo)
+
+
+def test_the_original_error_is_preserved_as_cause(archivo):
+    original = OSError("permiso denegado")
+    storage = LocalFileStorage(platform="linux", spawn=SpawnRecorder(error=original))
+
+    with pytest.raises(FileOpenException) as error:
+        storage.open_in_default_app(archivo)
+
+    assert error.value.__cause__ is original
+
+
+def test_open_command_is_inspectable_without_launching(archivo):
+    assert LocalFileStorage(platform="linux").open_command(archivo) == ["xdg-open", str(archivo)]
+    assert LocalFileStorage(platform="darwin").open_command(archivo) == ["open", str(archivo)]
+
+
+def test_default_construction_still_works():
+    """El resto del código construye LocalFileStorage() sin argumentos."""
+    storage = LocalFileStorage()
+
+    assert isinstance(storage.is_windows, bool)

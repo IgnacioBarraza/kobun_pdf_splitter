@@ -49,3 +49,15 @@ class FileStorage(ABC):
         numerada disponible: book.pdf -> book_1.pdf -> book_2.pdf.
         """
         pass
+
+    @abstractmethod
+    def open_in_default_app(self, path: Path) -> None:
+        """
+        Abre el archivo con la aplicación predeterminada del sistema.
+
+        No espera a que esa aplicación termine: sólo la lanza.
+
+        :raises FileOpenException: Si el archivo no existe o el sistema no
+            pudo lanzarlo.
+        """
+        pass
