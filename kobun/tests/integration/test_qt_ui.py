@@ -124,9 +124,16 @@ def settle(qt_app) -> None:
     """
     Espera a que el pool de hilos termine y procesa los eventos pendientes,
     que es cómo llegan los resultados desde el worker al hilo principal.
+
+    Se procesa varias veces a propósito: `processEvents` no atiende lo que se
+    encola *durante* su propia ejecución, y un slot puede emitir señales que
+    disparan más trabajo. Con una sola pasada los tests aprueban en offscreen
+    pero se vuelven sensibles al timing en un compositor real.
     """
     QThreadPool.globalInstance().waitForDone(TIMEOUT_MS)
-    qt_app.processEvents()
+
+    for _ in range(3):
+        qt_app.processEvents()
 
 
 def load(window, qt_app, path):
