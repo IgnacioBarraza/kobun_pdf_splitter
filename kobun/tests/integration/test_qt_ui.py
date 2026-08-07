@@ -63,8 +63,32 @@ def source_pdf(tmp_path):
     return path
 
 
+class DialogRecorder:
+    """
+    Sustituye a los diálogos modales: sin esto, un QMessageBox esperando un
+    clic dejaría la suite colgada esperando que alguien lo cierre.
+    """
+
+    def __init__(self, answer: bool = True):
+        self.errors = []
+        self.questions = []
+        self.answer = answer
+
+    def show_error(self, parent, error):
+        self.errors.append(error)
+
+    def ask_confirmation(self, parent, question, accept_text="Continuar"):
+        self.questions.append(question)
+        return self.answer
+
+
 @pytest.fixture
-def window(qt_app, tmp_path):
+def dialogs():
+    return DialogRecorder()
+
+
+@pytest.fixture
+def window(qt_app, tmp_path, dialogs):
     file_storage = LocalFileStorage()
     pdf_repository = PyMuPdfRepository(PdfEngineAdapter())
     pdf_service = PdfSplitterService()
@@ -86,6 +110,8 @@ def window(qt_app, tmp_path):
         view_model,
         ThemeService(preferences, JsonThemeSource()),
         history_repository,
+        show_error=dialogs.show_error,
+        ask_confirmation=dialogs.ask_confirmation,
     )
 
     ventana.show()
@@ -318,3 +344,86 @@ def test_the_theme_choice_survives_a_new_window(qt_app, tmp_path):
         JsonPreferencesRepository(preferences.file_path), JsonThemeSource()
     )
     assert otra_sesion.current().name == DARK_THEME
+
+
+# =========================
+# Diálogos
+# =========================
+
+def test_a_failed_load_opens_a_dialog(window, qt_app, dialogs, tmp_path):
+    roto = tmp_path / "roto.pdf"
+    roto.write_bytes(b"no soy un pdf")
+
+    load(window, qt_app, roto)
+
+    assert len(dialogs.errors) == 1
+    assert "no es un PDF" in window.ui.label_status.text()
+
+
+def test_a_failed_split_opens_a_dialog(window, qt_app, dialogs, source_pdf, tmp_path):
+    ocupado = tmp_path / "ocupado.pdf"
+    ocupado.write_bytes(b"previo")
+
+    load(window, qt_app, source_pdf)
+    window.ui.split_options.input_selection.setText("1-3")
+    window.ui.split_options.input_output.setText(str(ocupado))
+    window.ui.btn_process.click()
+    settle(qt_app)
+
+    assert len(dialogs.errors) == 1
+    assert "ya existe" in str(dialogs.errors[0])
+
+
+def test_a_successful_split_opens_no_dialog(window, qt_app, dialogs, source_pdf):
+    load(window, qt_app, source_pdf)
+    window.ui.split_options.input_selection.setText("1-3")
+    window.ui.btn_process.click()
+    settle(qt_app)
+
+    assert dialogs.errors == []
+
+
+def test_opening_a_missing_export_opens_a_dialog(window, qt_app, dialogs, source_pdf):
+    load(window, qt_app, source_pdf)
+    window.ui.split_options.input_selection.setText("2-4")
+    window.ui.btn_process.click()
+    settle(qt_app)
+
+    (source_pdf.parent / "libro_2-4.pdf").unlink()
+    window.ui.list_history.setCurrentRow(0)
+    window.ui.btn_open_export.setEnabled(True)
+    window.ui.btn_open_export.click()
+
+    assert len(dialogs.errors) == 1
+    assert "ya no está disponible" in str(dialogs.errors[0])
+
+
+def test_clearing_the_history_asks_first(window, qt_app, dialogs, source_pdf):
+    load(window, qt_app, source_pdf)
+    window.ui.split_options.input_selection.setText("2-4")
+    window.ui.btn_process.click()
+    settle(qt_app)
+
+    window.ui.btn_clear_history.click()
+
+    assert len(dialogs.questions) == 1
+    assert window.ui.list_history.count() == 0
+
+
+def test_declining_the_confirmation_keeps_the_history(window, qt_app, dialogs, source_pdf):
+    load(window, qt_app, source_pdf)
+    window.ui.split_options.input_selection.setText("2-4")
+    window.ui.btn_process.click()
+    settle(qt_app)
+    dialogs.answer = False
+
+    window.ui.btn_clear_history.click()
+
+    assert len(dialogs.questions) == 1
+    assert window.ui.list_history.count() == 1, "Cancelar no debe borrar nada"
+
+
+def test_clearing_an_empty_history_does_not_ask(window, dialogs):
+    window.ui.btn_clear_history.click()
+
+    assert dialogs.questions == []

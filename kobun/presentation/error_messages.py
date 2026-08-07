@@ -12,7 +12,8 @@ Separa dos cosas que no deben confundirse:
 Esta distinción es posible porque el dominio garantiza que sólo deja escapar
 sus propias excepciones; cualquier otra cosa es, por definición, un bug.
 """
-from typing import Dict, Type
+from dataclasses import dataclass
+from typing import Dict, Optional, Type
 
 from kobun.domain.history.exceptions.invalid_export_record_exception import (
     InvalidExportRecordException,
@@ -82,3 +83,40 @@ def technical_detail(error: Exception) -> str:
     principal.
     """
     return f"{type(error).__name__}: {error}"
+
+
+EXPECTED_TITLE = "No se pudo completar la operación"
+UNEXPECTED_TITLE = "Error inesperado"
+
+
+@dataclass(frozen=True)
+class ErrorPrompt:
+    """
+    Qué mostrar en un diálogo de error, decidido sin depender de Qt.
+
+    Separar la decisión de la presentación permite testear la política —qué
+    título, qué ícono, si se ofrece detalle técnico— sin abrir ventanas.
+    """
+
+    title: str
+    message: str
+    is_critical: bool
+    detail: Optional[str] = None
+
+
+def build_error_prompt(error: Exception) -> ErrorPrompt:
+    """
+    Traduce una excepción al contenido de su diálogo.
+
+    Los errores esperados son advertencias con el mensaje ya listo. Los
+    inesperados son críticos y llevan el detalle técnico aparte, para que el
+    usuario pueda copiarlo al reportar sin tener que leerlo.
+    """
+    expected = is_expected(error)
+
+    return ErrorPrompt(
+        title=EXPECTED_TITLE if expected else UNEXPECTED_TITLE,
+        message=translate(error),
+        is_critical=not expected,
+        detail=None if expected else technical_detail(error),
+    )

@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QListWidgetItem, QMainWindow
@@ -9,11 +9,17 @@ from kobun.application.services.theme_service import ThemeService
 from kobun.domain.pdf.exceptions.invalid_page_range_exception import InvalidPageRangeException
 from kobun.domain.pdf.value_objects.page_selection import PageSelection
 from kobun.presentation import error_messages
+from kobun.presentation.qt import dialogs
 from kobun.presentation.qt.styles.style_generator import StyleGenerator
 from kobun.presentation.qt.windows.ui_main_window import HISTORY_PAGE, SPLIT_PAGE, Ui_MainWindow
 from kobun.presentation.viewmodels.pdf_view_model import PdfViewModel
 
 RECORD_ROLE = Qt.ItemDataRole.UserRole
+
+CLEAR_HISTORY_QUESTION = (
+    "Se va a borrar todo el historial de exportaciones.\n\n"
+    "Los PDFs generados no se tocan; sólo se pierde el registro."
+)
 
 
 class MainWindow(QMainWindow):
@@ -30,11 +36,18 @@ class MainWindow(QMainWindow):
         view_model: PdfViewModel,
         theme_service: ThemeService,
         history_repository: HistoryRepository,
+        show_error: Optional[Callable] = None,
+        ask_confirmation: Optional[Callable] = None,
     ):
         super().__init__()
         self._view_model = view_model
         self._theme_service = theme_service
         self._history_repository = history_repository
+
+        # Inyectables para poder verificar qué diálogo se abre sin que un
+        # modal bloquee la suite de tests esperando un clic.
+        self._show_error = show_error or dialogs.show_error
+        self._ask_confirmation = ask_confirmation or dialogs.ask_confirmation
 
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
@@ -74,12 +87,17 @@ class MainWindow(QMainWindow):
         ui.btn_clear_history.clicked.connect(self._clear_history)
 
         self._view_model.document_loaded.connect(self._on_document_loaded)
-        self._view_model.load_failed.connect(self._on_error)
         self._view_model.split_succeeded.connect(self._on_split_succeeded)
-        self._view_model.split_failed.connect(self._on_error)
         self._view_model.history_changed.connect(self._render_history)
-        self._view_model.history_failed.connect(self._on_error)
         self._view_model.busy_changed.connect(self._on_busy_changed)
+
+        # Lo que el usuario pidió y falló lo interrumpe con un diálogo.
+        self._view_model.load_failed.connect(self._report_blocking_error)
+        self._view_model.split_failed.connect(self._report_blocking_error)
+
+        # El historial es secundario: si no se puede escribir o leer, el PDF
+        # ya se generó y un modal sería alarmista.
+        self._view_model.history_failed.connect(self._report_minor_error)
 
     # =========================
     # Carga
@@ -186,9 +204,15 @@ class MainWindow(QMainWindow):
         try:
             self._view_model.open_export(entry.record.output_path)
         except Exception as error:
-            self._on_error(error)
+            self._report_blocking_error(error)
 
     def _clear_history(self) -> None:
+        if self.ui.list_history.count() == 0:
+            return
+
+        if not self._ask_confirmation(self, CLEAR_HISTORY_QUESTION, "Borrar historial"):
+            return
+
         self._history_repository.clear()
         self._view_model.refresh_history()
         self._set_status("Historial vacío.")
@@ -210,7 +234,16 @@ class MainWindow(QMainWindow):
         )
         self.ui.btn_process.setEnabled(listo)
 
-    def _on_error(self, error: Exception) -> None:
+    def _report_blocking_error(self, error: Exception) -> None:
+        """
+        Falló algo que el usuario pidió explícitamente: diálogo modal, y el
+        mensaje queda además en la barra de estado como recordatorio de qué
+        pasó una vez cerrado.
+        """
+        self._report_minor_error(error)
+        self._show_error(self, error)
+
+    def _report_minor_error(self, error: Exception) -> None:
         self._set_status(error_messages.translate(error), error=True)
 
         if not error_messages.is_expected(error):

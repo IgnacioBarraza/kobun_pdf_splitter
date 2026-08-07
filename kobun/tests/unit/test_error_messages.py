@@ -60,3 +60,45 @@ def test_technical_detail_includes_the_type():
 def test_subclasses_are_treated_as_expected():
     """PdfNotFoundException hereda de InvalidPdfException."""
     assert error_messages.is_expected(PdfNotFoundException("no está"))
+
+
+# =========================
+# Contenido del diálogo
+# =========================
+
+def test_expected_errors_produce_a_warning_prompt():
+    prompt = error_messages.build_error_prompt(
+        InvalidOutputPathException("El archivo de salida ya existe: out.pdf")
+    )
+
+    assert prompt.is_critical is False
+    assert prompt.title == error_messages.EXPECTED_TITLE
+    assert prompt.message == "El archivo de salida ya existe: out.pdf"
+
+
+def test_expected_errors_carry_no_technical_detail():
+    """No hay nada técnico que reportar: el usuario puede corregirlo solo."""
+    prompt = error_messages.build_error_prompt(InvalidPageRangeException("Rango inválido"))
+
+    assert prompt.detail is None
+
+
+def test_unexpected_errors_produce_a_critical_prompt():
+    prompt = error_messages.build_error_prompt(RuntimeError("segfault"))
+
+    assert prompt.is_critical is True
+    assert prompt.title == error_messages.UNEXPECTED_TITLE
+    assert prompt.message == error_messages.UNEXPECTED_ERROR_MESSAGE
+
+
+def test_unexpected_errors_keep_the_detail_for_reporting():
+    prompt = error_messages.build_error_prompt(RuntimeError("segfault en el motor"))
+
+    assert prompt.detail == "RuntimeError: segfault en el motor"
+    assert "segfault" not in prompt.message, "El detalle va aparte, no en el mensaje"
+
+
+def test_the_prompt_respects_message_overrides():
+    prompt = error_messages.build_error_prompt(EncryptedPdfException("'x.pdf' está protegido."))
+
+    assert "contraseña" in prompt.message
