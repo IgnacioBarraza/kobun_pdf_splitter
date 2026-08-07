@@ -11,7 +11,9 @@ pymupdf = pytest.importorskip("pymupdf", reason="PyMuPDF no instalado")
 
 from kobun.application.dto.split_pdf_request import SplitPdfRequest
 from kobun.application.services.output_path_resolver import OutputPathResolver
+from kobun.application.use_cases.list_history_use_case import ListHistoryUseCase
 from kobun.application.use_cases.load_pdf_use_case import LoadPdfUseCase
+from kobun.application.use_cases.record_split_use_case import RecordSplitUseCase
 from kobun.application.use_cases.split_pdf_use_case import SplitPdfUseCase
 from kobun.domain.pdf.exceptions.encrypted_pdf_exception import EncryptedPdfException
 from kobun.domain.pdf.exceptions.invalid_output_path_exception import InvalidOutputPathException
@@ -24,6 +26,7 @@ from kobun.domain.pdf.value_objects.page_range import PageRange
 from kobun.domain.pdf.value_objects.page_selection import PageSelection
 from kobun.infrastructure.filesystem.local_file_storage import LocalFileStorage
 from kobun.infrastructure.pdf_engine.pdf_engine_adapter import PdfEngineAdapter
+from kobun.infrastructure.repositories.json_history_repository import JsonHistoryRepository
 from kobun.infrastructure.repositories.pdf_repository_impl import PyMuPdfRepository
 
 SOURCE_PAGES = 30
@@ -436,3 +439,78 @@ def test_suggested_path_matches_what_execute_actually_writes(use_case, load_use_
     result = use_case.execute(SplitPdfRequest(source_pdf, selection))
 
     assert result.output_path == suggested
+
+
+# =========================================================
+# Historial sobre exportaciones reales
+# =========================================================
+
+@pytest.fixture
+def history(tmp_path):
+    repositorio = JsonHistoryRepository(tmp_path / "datos" / "history.json")
+    almacenamiento = LocalFileStorage()
+
+    return (
+        RecordSplitUseCase(repositorio),
+        ListHistoryUseCase(repositorio, almacenamiento),
+        repositorio,
+    )
+
+
+def test_a_real_export_can_be_recorded_and_listed(use_case, source_pdf, history):
+    grabar, listar, _ = history
+
+    response = use_case.execute(SplitPdfRequest(source_pdf, PageSelection.parse("1-3,10")))
+    grabar.execute(response)
+
+    entradas = listar.execute()
+
+    assert len(entradas) == 1
+    assert entradas[0].is_available is True
+    assert entradas[0].record.output_path == response.output_path
+    assert entradas[0].record.page_count == 4
+    assert entradas[0].record.size_bytes == response.output_path.stat().st_size
+
+
+def test_history_survives_a_new_repository_instance(use_case, source_pdf, history, tmp_path):
+    """El historial debe sobrevivir al cierre de la aplicación."""
+    grabar, _, repositorio = history
+
+    grabar.execute(use_case.execute(SplitPdfRequest(source_pdf, PageSelection.parse("2-4"))))
+
+    otra_sesion = ListHistoryUseCase(
+        JsonHistoryRepository(repositorio.file_path), LocalFileStorage()
+    )
+
+    assert len(otra_sesion.execute()) == 1
+
+
+def test_deleted_exports_are_marked_not_removed(use_case, source_pdf, history):
+    grabar, listar, _ = history
+
+    borrado = use_case.execute(SplitPdfRequest(source_pdf, PageSelection.parse("1-2")))
+    vigente = use_case.execute(SplitPdfRequest(source_pdf, PageSelection.parse("5-6")))
+    grabar.execute(borrado)
+    grabar.execute(vigente)
+
+    borrado.output_path.unlink()
+    entradas = listar.execute()
+
+    assert len(entradas) == 2, "La entrada muerta se marca, no se filtra"
+    assert entradas[0].record.output_path == vigente.output_path
+    assert entradas[0].is_available is True
+    assert entradas[1].is_available is False
+
+
+def test_recorded_selection_can_be_replayed(use_case, source_pdf, history, tmp_path):
+    """
+    El historial guarda la selección como Value Object, así que repetir una
+    exportación no requiere volver a parsear texto.
+    """
+    grabar, listar, _ = history
+    grabar.execute(use_case.execute(SplitPdfRequest(source_pdf, PageSelection.parse("3-5,20"))))
+
+    guardada = listar.execute()[0].record.selection
+    repetido = use_case.execute(SplitPdfRequest(source_pdf, guardada, tmp_path / "repetido.pdf"))
+
+    assert read_pages(repetido.output_path) == labels(3, 4, 5, 20)

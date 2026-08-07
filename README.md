@@ -36,6 +36,8 @@ Ya disponibles (dominio + infraestructura):
   `RENAME`), and never writes over the source file
 - Rejects unreadable input before processing: missing files, directories,
   empty files, non-PDFs, and password-protected PDFs
+- Persistent export history (last 50), stored per-OS in the user's data
+  directory; entries whose file was moved or deleted are flagged, not dropped
 - Strict domain validation for invalid page ranges
 - Explicit domain-level exceptions — PyMuPDF errors never reach the caller
 
@@ -154,7 +156,7 @@ split_use_case.execute(                                      # sin fallar si exi
 - [x] Multiple range support (e.g., `1-5,10-15`)
 - [x] Automated tests for domain layer
 - [x] Output path selection with overwrite policy
-- [ ] Export history
+- [x] Export history
 - [ ] Qt UI wired to the use cases
 - [ ] Light / dark theme system
 - [ ] Batch splitting
