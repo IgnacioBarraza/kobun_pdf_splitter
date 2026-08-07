@@ -80,10 +80,13 @@ class OutputPathResolver:
                 f"Ya existe un directorio con esa ruta: {target}"
             )
 
-        if policy is OverwritePolicy.OVERWRITE:
+        # Comparación por valor y no por identidad: OverwritePolicy es un str
+        # Enum justamente para tolerar que llegue como texto desde un combo de
+        # Qt, un archivo de configuración o la línea de comandos.
+        if policy == OverwritePolicy.OVERWRITE:
             return target
 
-        if policy is OverwritePolicy.RENAME:
+        if policy == OverwritePolicy.RENAME:
             return self._file_storage.unique_path(target)
 
         raise InvalidOutputPathException(

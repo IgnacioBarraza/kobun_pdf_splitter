@@ -1,6 +1,9 @@
 import json
 from pathlib import Path
+from typing import Optional
 
+from kobun.application.interfaces.theme_source import ThemeSource
+from kobun.shared.config.theme_settings import theme_file
 from kobun.shared.theme import AppTheme
 
 
@@ -46,3 +49,21 @@ class ThemeLoader:
         }
         with open(path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4)
+
+
+class JsonThemeSource(ThemeSource):
+    """
+    Temas leídos de los JSON que se distribuyen con la aplicación.
+    """
+
+    def __init__(self, directory: Optional[Path] = None):
+        self._directory = Path(directory) if directory is not None else None
+
+    def load(self, theme_name: str) -> AppTheme:
+        path = (
+            self._directory / f"{theme_name}.json"
+            if self._directory is not None
+            else theme_file(theme_name)
+        )
+
+        return ThemeLoader.load_from_json(path)

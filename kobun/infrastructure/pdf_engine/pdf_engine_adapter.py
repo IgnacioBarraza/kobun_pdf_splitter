@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence
 
-import fitz
+import pymupdf
 from pymupdf import Document
 
 from kobun.domain.pdf.value_objects.page_range import PageRange
@@ -20,7 +20,7 @@ class PdfEngineAdapter:
     """
 
     def open_document(self, file_path: Path) -> Document:
-        return fitz.open(file_path)
+        return pymupdf.open(file_path)
 
     def close_document(self, document: Document) -> None:
         document.close()
@@ -63,7 +63,7 @@ class PdfEngineAdapter:
         return page.get_text("text")
 
     def create_empty_document(self) -> Document:
-        return fitz.open()
+        return pymupdf.open()
 
     def split_single_page(self, src_doc: Document, page_index: int) -> Document:
         """

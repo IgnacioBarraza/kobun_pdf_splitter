@@ -1,0 +1,21 @@
+{
+    "name": "dark",
+    "colors": {
+        "background": "#1c1917",
+        "surface": "#262220",
+        "surface_alt": "#332d2a",
+        "primary": "#e07a6f",
+        "primary_hover": "#eb9084",
+        "border": "#3a3330",
+        "border_strong": "#544a45",
+        "danger": "#f2857c",
+        "success": "#7cc39b",
+        "muted": "#8a7d76",
+        "text": {
+            "primary": "#f2ece8",
+            "secondary": "#b3a69f",
+            "inverse": "#1c1917",
+            "disabled": "#6b605a"
+        }
+    }
+}

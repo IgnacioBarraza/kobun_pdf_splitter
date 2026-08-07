@@ -98,3 +98,10 @@ def test_response_is_immutable():
         assert False, "La respuesta no debería poder mutarse"
     except AttributeError:
         pass
+
+
+def test_request_accepts_a_policy_given_as_text():
+    """OverwritePolicy es str Enum para tolerar valores desde Qt o config."""
+    request = SplitPdfRequest(Path("book.pdf"), PageSelection.parse("1-5"), policy="overwrite")
+
+    assert request.policy == OverwritePolicy.OVERWRITE
