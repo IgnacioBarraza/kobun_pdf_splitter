@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QPushButton,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -77,7 +78,10 @@ class SplitOptionsWidget(QWidget):
 
         self.label_folder = QLabel(NO_FOLDER)
         self.label_folder.setObjectName("SecondaryText")
-        self.label_folder.setMinimumWidth(0)
+        # Ignored en horizontal: sin esto el sizeHint de una ruta larga expande
+        # el layout más allá de la ventana y el texto se corta contra el borde
+        # en lugar de recortarse con puntos suspensivos.
+        self.label_folder.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         layout.addWidget(self.label_folder)
 
         layout.addSpacing(8)
@@ -175,6 +179,12 @@ class SplitOptionsWidget(QWidget):
         super().resizeEvent(event)
         self._render_folder()
 
+    def showEvent(self, event) -> None:
+        # Al fijar la carpeta el layout todavía no corrió, así que el ancho
+        # disponible era el inicial. Se recalcula cuando ya hay geometría real.
+        super().showEvent(event)
+        self._render_folder()
+
     def _render_folder(self) -> None:
         if self._directory is None:
             self.label_folder.setText(NO_FOLDER)
@@ -183,7 +193,9 @@ class SplitOptionsWidget(QWidget):
 
         completa = str(self._directory)
         metrics = QFontMetrics(self.label_folder.font())
-        disponible = max(self.label_folder.width() - 12, 80)
+        # Se mide contra el ancho del widget contenedor: el del label es
+        # "Ignored", así que no refleja un límite útil.
+        disponible = max(self.width() - 90, 120)
 
         self.label_folder.setText(
             f"Carpeta: {metrics.elidedText(completa, Qt.TextElideMode.ElideMiddle, disponible)}"

@@ -49,20 +49,28 @@ class Ui_MainWindow:
     def _build_sidebar(self) -> QFrame:
         self.sidebar = QFrame()
         self.sidebar.setObjectName("Sidebar")
-        self.sidebar.setFixedWidth(210)
+        self.sidebar.setFixedWidth(224)
 
         layout = QVBoxLayout(self.sidebar)
-        layout.setContentsMargins(16, 20, 16, 20)
-        layout.setSpacing(8)
+        # Sin margen horizontal: la barra de acento de la navegación tiene que
+        # tocar el borde del panel, como en un rail.
+        layout.setContentsMargins(0, 26, 0, 22)
+        layout.setSpacing(0)
+
+        cabecera = QVBoxLayout()
+        cabecera.setContentsMargins(18, 0, 18, 0)
+        cabecera.setSpacing(2)
 
         self.label_logo = QLabel("KOBUN")
         self.label_logo.setObjectName("Logo")
-        layout.addWidget(self.label_logo)
+        cabecera.addWidget(self.label_logo)
 
         self.label_tagline = QLabel("Dividir PDFs")
         self.label_tagline.setObjectName("SecondaryText")
-        layout.addWidget(self.label_tagline)
-        layout.addSpacing(20)
+        cabecera.addWidget(self.label_tagline)
+
+        layout.addLayout(cabecera)
+        layout.addSpacing(28)
 
         self.btn_split = self._nav_button("Dividir PDF", checked=True)
         layout.addWidget(self.btn_split)
@@ -72,14 +80,29 @@ class Ui_MainWindow:
 
         layout.addStretch()
 
-        self.label_theme = QLabel("Tema")
-        self.label_theme.setObjectName("SecondaryText")
-        layout.addWidget(self.label_theme)
+        pie = QVBoxLayout()
+        pie.setContentsMargins(18, 0, 18, 0)
+        pie.setSpacing(6)
+
+        self.label_theme = QLabel("TEMA")
+        self.label_theme.setObjectName("SectionLabel")
+        pie.addWidget(self.label_theme)
 
         self.combo_theme = QComboBox()
-        layout.addWidget(self.combo_theme)
+        pie.addWidget(self.combo_theme)
+
+        layout.addLayout(pie)
 
         return self.sidebar
+
+    @staticmethod
+    def _hairline() -> QFrame:
+        """Línea de un píxel: separa secciones sin encerrarlas en un marco."""
+        linea = QFrame()
+        linea.setObjectName("Hairline")
+        linea.setFixedHeight(1)
+
+        return linea
 
     @staticmethod
     def _nav_button(text: str, checked: bool = False) -> QPushButton:
@@ -100,8 +123,8 @@ class Ui_MainWindow:
         self.content_area.setObjectName("MainContainer")
 
         layout = QVBoxLayout(self.content_area)
-        layout.setContentsMargins(28, 24, 28, 24)
-        layout.setSpacing(14)
+        layout.setContentsMargins(38, 30, 38, 26)
+        layout.setSpacing(18)
 
         self.pages = QStackedWidget()
         self.pages.addWidget(self._build_split_page())
@@ -124,7 +147,7 @@ class Ui_MainWindow:
         page = QWidget()
         layout = QVBoxLayout(page)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(14)
+        layout.setSpacing(20)
 
         self.title_split = QLabel("Dividir documento")
         self.title_split.setObjectName("Title")
@@ -132,6 +155,8 @@ class Ui_MainWindow:
 
         self.drop_area = DragDropArea()
         layout.addWidget(self.drop_area)
+
+        layout.addWidget(self._hairline())
 
         self.split_options = SplitOptionsWidget()
         layout.addWidget(self.split_options)
@@ -150,7 +175,7 @@ class Ui_MainWindow:
         page = QWidget()
         layout = QVBoxLayout(page)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(14)
+        layout.setSpacing(12)
 
         self.title_history = QLabel("Historial de exportaciones")
         self.title_history.setObjectName("Title")
@@ -167,6 +192,7 @@ class Ui_MainWindow:
         layout.addWidget(self.list_history, stretch=1)
 
         actions = QHBoxLayout()
+        actions.setSpacing(8)
         actions.addStretch()
 
         self.btn_open_export = QPushButton("Abrir seleccionado")

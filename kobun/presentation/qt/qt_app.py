@@ -73,6 +73,11 @@ def run(argv: Optional[List[str]] = None) -> int:
     app = QApplication(argv if argv is not None else sys.argv)
     app.setApplicationName(APP_NAME)
 
+    # Fusion es el estilo propio de Qt y no el del sistema. Sin esto, parte
+    # del QSS queda pisada por el tema nativo y la ventana se ve distinta en
+    # cada máquina: era lo que hacía asomar el estilo de Ubuntu.
+    app.setStyle("Fusion")
+
     # Declara el app_id del escritorio. En Wayland es lo único que permite al
     # compositor asociar la ventana con su .desktop —y por lo tanto con su
     # icono—; sin esto el app_id sería "python3".

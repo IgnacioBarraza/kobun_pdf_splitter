@@ -434,9 +434,21 @@ def test_the_selector_shows_readable_labels(window):
     etiquetas = [window.ui.combo_theme.itemText(i) for i in range(window.ui.combo_theme.count())]
 
     assert "Claro" in etiquetas
-    assert "Sumi (tinta)" in etiquetas
-    assert "Yozora (cielo nocturno)" in etiquetas
+    assert "Sumi · tinta" in etiquetas
+    assert "Yozora · noche" in etiquetas
     assert "washi_shu" not in etiquetas
+
+
+def test_the_theme_labels_fit_the_sidebar(window):
+    """
+    El sidebar es angosto; una etiqueta larga se recorta con puntos y queda
+    sucia. Se acota el largo en vez de descubrirlo mirando capturas.
+    """
+    combo = window.ui.combo_theme
+    etiquetas = [combo.itemText(i) for i in range(combo.count()) if combo.itemData(i)]
+
+    for etiqueta in etiquetas:
+        assert len(etiqueta) <= 20, f"'{etiqueta}' no entra en el selector"
 
 
 def test_the_selector_starts_on_the_active_theme(window):

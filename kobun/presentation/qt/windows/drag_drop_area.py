@@ -24,12 +24,12 @@ class DragDropArea(QFrame):
         super().__init__(parent)
         self.setObjectName("DropArea")
         self.setAcceptDrops(True)
-        self.setMinimumHeight(150)
+        self.setMinimumHeight(172)
         self.setProperty("dragActive", False)
 
         layout = QVBoxLayout(self)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.setSpacing(10)
+        layout.setSpacing(12)
 
         self.label_file = QLabel(PLACEHOLDER)
         self.label_file.setAlignment(Qt.AlignmentFlag.AlignCenter)
