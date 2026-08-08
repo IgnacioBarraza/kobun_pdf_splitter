@@ -15,38 +15,48 @@ The project emphasizes:
 
 ---
 
-> **Estado actual:** el dominio, la aplicación y la infraestructura están
-> cerrados y cubiertos por tests. La interfaz Qt está en construcción: hoy el
-> entry point es una CLI provisional que ejercita el mismo use case que usará
-> la UI.
-
----
-
 ## ✨ Features
 
-Ya disponibles (dominio + infraestructura):
+### Splitting
 
-- PDF processing powered by **PyMuPDF**
 - Extract page ranges, including discontinuous selections: `1-5,10-15,20`
 - Overlapping or adjacent ranges are merged automatically — no duplicate pages
+- Page indices are 1-based and inclusive, as printed in the document
 - Output metadata derived from the source document, traceable back to it
+- PDF processing powered by **PyMuPDF**
+
+### Choosing where it lands
+
 - Suggested output filename: `book.pdf` + `1-5,10-15` → `book_1-5_10-15.pdf`,
   sanitized for Windows/macOS/Linux
+- The destination field asks for a filename; the folder is shown separately
 - Output never overwrites silently — `OverwritePolicy` (`FAIL` / `OVERWRITE` /
-  `RENAME`), and never writes over the source file
+  `RENAME`) — and never writes over the source file
+
+### Reading the input safely
+
 - Rejects unreadable input before processing: missing files, directories,
   empty files, non-PDFs, and password-protected PDFs
-- Persistent export history (last 50), stored per-OS in the user's data
-  directory; entries whose file was moved or deleted are flagged, not dropped
 - Strict domain validation for invalid page ranges
 - Explicit domain-level exceptions — PyMuPDF errors never reach the caller
 
-En construcción (capa de presentación):
+### Interface
 
 - Desktop interface built with **PySide6 (Qt for Python)**
-- Select any local PDF file from the UI
-- Open the exported PDF directly from the application
-- Recently exported files history
+- Drag & drop, or pick a file from the system dialog
+- Long operations run on a worker thread, so the window never freezes
+- Expected errors are reported as warnings; unexpected ones show a generic
+  message and keep the technical detail for reporting
+- **10 themes**, 5 light and 5 dark, most of them built around a Japanese
+  palette (washi, indigo, matcha, ink, bamboo, violet…). The choice persists
+  between sessions
+
+### Export history
+
+- Persistent history of the last 50 exports, stored per-OS in the user's data
+  directory
+- Entries whose file was moved or deleted are flagged, not dropped
+- Open an exported PDF with the system viewer, straight from the list
 
 ---
 
@@ -58,11 +68,14 @@ Kobun follows a layered structure inspired by Domain-Driven Design (DDD):
 kobun/
 │
 ├── domain/         # Core business rules and value objects
-├── application/    # Use cases and orchestration
-├── infrastructure/ # PDF and file system integrations (PyMuPDF)
-├── presentation/   # Qt UI (PySide6)
-├── shared/         # Cross-cutting concerns (themes, settings)
-└── tests/          # unit/ (pure domain) and integration/ (real PDFs)
+├── application/    # Use cases, DTOs and port interfaces
+├── infrastructure/ # PDF engine, filesystem and persistence (PyMuPDF, JSON)
+├── presentation/   # Qt UI (PySide6) and viewmodels
+├── shared/         # Cross-cutting concerns (themes, settings, icons)
+└── tests/          # unit/ (no dependencies) and integration/ (real PDFs, real window)
+
+assets/             # Source artwork, not shipped with the package
+scripts/            # Desktop integration helpers
 ```
 
 ### Architectural Principles
@@ -74,6 +87,8 @@ kobun/
 - Clear dependency direction (outer layers depend on inner layers)
 - **Page indices are 1-based everywhere** — from `PageRange` up to the UI. The
   translation to PyMuPDF's 0-based API happens only inside `PdfEngineAdapter`.
+- The UI knows no use cases: the window talks to a viewmodel, and the
+  viewmodel is the only thing that touches the application layer.
 
 ---
 
@@ -95,46 +110,62 @@ pip install -r requirements.txt
 ## 🚀 Running the Application
 
 ```bash
-python main.py
+./.venv/bin/python main.py
 ```
 
-> La UI de Qt todavía no está conectada. `main.py` levanta una CLI provisional
-> que pide la ruta del PDF y la selección de páginas (`1-5,10-15`), y ejecuta
-> el mismo `SplitPdfUseCase` que consumirá la ventana.
+Or, with the environment activated, `python main.py`.
+
+### Desktop integration on Linux (optional)
+
+On Wayland the compositor does not read the icon from the window: it matches
+the application to a `.desktop` file through its app id. Without that file the
+dock shows a generic Python icon.
+
+```bash
+./.venv/bin/python scripts/install_desktop_entry.py
+```
+
+This installs the icons into `~/.local/share/icons/hicolor` and the entry into
+`~/.local/share/applications`, with no root required. Kobun then appears in the
+application menu too. Use `--uninstall` to undo it.
 
 ---
 
 ## 🧪 Tests
 
 ```bash
-pytest kobun/tests            # todo
-pytest kobun/tests/unit       # dominio puro, sin dependencias
+pytest kobun/tests            # everything
+pytest kobun/tests/unit       # pure domain, no dependencies
 ```
 
-Los tests de `integration/` generan PDFs reales con PyMuPDF y verifican que se
-extraigan exactamente las páginas pedidas. Se omiten solos si PyMuPDF no está
-instalado.
+The `unit/` suite runs with nothing but pytest installed. The `integration/`
+suite generates real PDFs with PyMuPDF and drives the real Qt window in
+offscreen mode, checking that exactly the requested pages come out; it skips
+itself when PyMuPDF or PySide6 are missing.
 
 ---
 
 ## 📂 Example Workflow
 
-1. Select `book.pdf`
+1. Drop `book.pdf` on the window
 2. Enter a page selection: `25-40`, or `1-5,10-15,20` for several sections at once
-3. Click **Export**
+3. Click **DIVIDIR PDF**
 4. Receive a PDF with exactly those pages, in that order
 
-Desde código:
+From code:
 
 ```python
-document = load_use_case.execute(Path("book.pdf"))          # valida el origen
+document = load_use_case.execute(Path("book.pdf"))       # validates the source
 selection = PageSelection.parse("1-5,10-15")
 
-split_use_case.execute(document.storage_path, selection)     # destino sugerido
-split_use_case.execute(document.storage_path, selection, Path("out.pdf"))
-split_use_case.execute(                                      # sin fallar si existe
-    document.storage_path, selection, Path("out.pdf"), OverwritePolicy.RENAME
-)
+response = split_use_case.execute(SplitPdfRequest(
+    input_path=document.storage_path,
+    selection=selection,
+    output_path=None,                                    # suggested name
+    policy=OverwritePolicy.RENAME,                       # do not fail if taken
+))
+
+record_use_case.execute(response)                        # add it to the history
 ```
 
 ---
@@ -157,8 +188,9 @@ split_use_case.execute(                                      # sin fallar si exi
 - [x] Automated tests for domain layer
 - [x] Output path selection with overwrite policy
 - [x] Export history
-- [ ] Qt UI wired to the use cases
-- [ ] Light / dark theme system
+- [x] Qt UI wired to the use cases
+- [x] Light / dark theme system
+- [ ] Page preview before splitting
 - [ ] Batch splitting
 - [ ] CLI version
 - [ ] Cross-platform packaging (Windows / macOS / Linux)
@@ -180,6 +212,7 @@ Please ensure:
 - Domain logic remains UI-agnostic
 - New features include validation and explicit error handling
 - Layer boundaries are respected
+- The `unit/` suite still runs without PyMuPDF or PySide6 installed
 
 ---
 
