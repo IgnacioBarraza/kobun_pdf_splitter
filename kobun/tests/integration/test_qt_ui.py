@@ -508,3 +508,43 @@ def test_the_chosen_theme_survives_a_new_window(qt_app, tmp_path):
         JsonPreferencesRepository(preferences.file_path), JsonThemeSource()
     )
     assert otra_sesion.current().name == "matcha"
+
+
+# =========================
+# Icono
+# =========================
+
+def test_the_window_has_an_icon(window):
+    icono = window.windowIcon()
+
+    assert not icono.isNull(), "la ventana quedaría con el icono genérico de Qt"
+
+
+def test_the_icon_carries_every_declared_size(window):
+    from kobun.shared.config.app_settings import APP_ICON_SIZES
+
+    disponibles = {tamano.width() for tamano in window.windowIcon().availableSizes()}
+
+    assert disponibles == set(APP_ICON_SIZES)
+
+
+def test_the_icon_renders_at_small_sizes_without_being_empty(window):
+    """
+    Qt devuelve un pixmap vacío si el archivo existe pero no se pudo decodificar.
+    """
+    for lado in (16, 32, 48):
+        pixmap = window.windowIcon().pixmap(lado, lado)
+
+        assert not pixmap.isNull()
+        assert pixmap.width() == lado
+
+
+def test_the_icon_keeps_its_transparent_corners(window):
+    """
+    Regresión del marco negro: la esquina del pixmap debe ser transparente,
+    no negra.
+    """
+    imagen = window.windowIcon().pixmap(64, 64).toImage()
+
+    assert imagen.pixelColor(0, 0).alpha() == 0, "la esquina no es transparente"
+    assert imagen.pixelColor(32, 32).alpha() == 255, "el centro debería ser opaco"

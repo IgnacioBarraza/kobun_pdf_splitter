@@ -19,9 +19,15 @@ from kobun.infrastructure.repositories.json_preferences_repository import (
 )
 from kobun.infrastructure.repositories.pdf_repository_impl import PyMuPdfRepository
 from kobun.infrastructure.ui.theme_loader import JsonThemeSource
+from kobun.presentation.qt.app_icon import load_app_icon
 from kobun.presentation.qt.windows.main_window import MainWindow
 from kobun.presentation.viewmodels.pdf_view_model import PdfViewModel
-from kobun.shared.config.app_settings import APP_NAME, HISTORY_FILENAME, PREFERENCES_FILENAME
+from kobun.shared.config.app_settings import (
+    APP_ID,
+    APP_NAME,
+    HISTORY_FILENAME,
+    PREFERENCES_FILENAME,
+)
 
 
 class KobunApplication:
@@ -66,6 +72,15 @@ def run(argv: Optional[List[str]] = None) -> int:
     """
     app = QApplication(argv if argv is not None else sys.argv)
     app.setApplicationName(APP_NAME)
+
+    # Declara el app_id del escritorio. En Wayland es lo único que permite al
+    # compositor asociar la ventana con su .desktop —y por lo tanto con su
+    # icono—; sin esto el app_id sería "python3".
+    app.setDesktopFileName(APP_ID)
+
+    # Sigue haciendo falta para X11 y Windows, donde el icono viaja con la
+    # ventana en lugar de resolverse por app_id.
+    app.setWindowIcon(load_app_icon())
 
     window = KobunApplication().build_window()
     window.show()

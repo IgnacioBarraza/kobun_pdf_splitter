@@ -10,6 +10,7 @@ from kobun.domain.pdf.exceptions.invalid_page_range_exception import InvalidPage
 from kobun.domain.pdf.value_objects.page_selection import PageSelection
 from kobun.presentation import error_messages
 from kobun.presentation.qt import dialogs
+from kobun.presentation.qt.app_icon import load_app_icon
 from kobun.presentation.qt.styles.style_generator import StyleGenerator
 from kobun.presentation.qt.windows.ui_main_window import HISTORY_PAGE, SPLIT_PAGE, Ui_MainWindow
 from kobun.presentation.viewmodels.pdf_view_model import PdfViewModel
@@ -51,6 +52,7 @@ class MainWindow(QMainWindow):
 
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.setWindowIcon(load_app_icon())
 
         self._populate_themes()
         self.apply_theme(self._theme_service.current())
