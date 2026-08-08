@@ -10,15 +10,26 @@ LIGHT_THEME = "light"
 DARK_THEME = "dark"
 
 AVAILABLE_THEMES: Tuple[str, ...] = (
+    # Claros
     LIGHT_THEME,
-    DARK_THEME,
     "washi_shu",
     "ai_indigo",
     "matcha",
     "sumi",
+    # Oscuros
+    DARK_THEME,
+    "yozora",
+    "kuro",
+    "take",
+    "murasaki",
 )
-"""Temas que el usuario puede elegir desde el selector, en el orden en que se
-listan. El nombre para mostrar lo declara cada JSON en su campo `label`."""
+"""Temas que el usuario puede elegir, en el orden en que se listan.
+
+Van los claros primero y los oscuros después: el selector los agrupa por
+luminancia del fondo, no por este orden, pero listarlos así evita que la lista
+salte de un grupo a otro.
+
+El nombre para mostrar lo declara cada JSON en su campo `label`."""
 
 
 def theme_file(name: str) -> Path:

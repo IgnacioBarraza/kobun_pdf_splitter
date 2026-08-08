@@ -398,9 +398,36 @@ def test_the_window_starts_with_a_stylesheet(window):
 
 def test_the_selector_lists_every_shipped_theme(window):
     combo = window.ui.combo_theme
+    nombres = [combo.itemData(i) for i in range(combo.count()) if combo.itemData(i)]
 
-    assert combo.count() == len(AVAILABLE_THEMES)
-    assert [combo.itemData(i) for i in range(combo.count())] == list(AVAILABLE_THEMES)
+    assert nombres == list(AVAILABLE_THEMES)
+
+
+def test_the_selector_separates_light_from_dark(window):
+    """Con nueve paletas, una lista corrida es difícil de leer."""
+    combo = window.ui.combo_theme
+    filas = [combo.itemData(i) for i in range(combo.count())]
+
+    assert combo.count() == len(AVAILABLE_THEMES) + 1, "falta el separador"
+    assert filas.count(None) == 1
+
+    corte = filas.index(None)
+    antes = [n for n in filas[:corte]]
+    despues = [n for n in filas[corte + 1:]]
+
+    assert all(not JsonThemeSource().load(n).is_dark for n in antes)
+    assert all(JsonThemeSource().load(n).is_dark for n in despues)
+
+
+def test_the_separator_cannot_be_chosen_as_a_theme(window):
+    """Un separador no tiene nombre de tema; elegirlo no debe romper nada."""
+    combo = window.ui.combo_theme
+    corte = [combo.itemData(i) for i in range(combo.count())].index(None)
+    antes = window.styleSheet()
+
+    window._on_theme_chosen(corte)
+
+    assert window.styleSheet() == antes
 
 
 def test_the_selector_shows_readable_labels(window):
@@ -408,6 +435,7 @@ def test_the_selector_shows_readable_labels(window):
 
     assert "Claro" in etiquetas
     assert "Sumi (tinta)" in etiquetas
+    assert "Yozora (cielo nocturno)" in etiquetas
     assert "washi_shu" not in etiquetas
 
 

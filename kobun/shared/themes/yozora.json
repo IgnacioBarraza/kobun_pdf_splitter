@@ -1,0 +1,22 @@
+{
+    "name": "yozora",
+    "label": "Yozora (cielo nocturno)",
+    "colors": {
+        "background": "#0e1424",
+        "surface": "#182034",
+        "surface_alt": "#243049",
+        "primary": "#7fa4d8",
+        "primary_hover": "#9bbae6",
+        "border": "#293349",
+        "border_strong": "#415070",
+        "danger": "#e8837a",
+        "success": "#7fc2a1",
+        "muted": "#74809a",
+        "text": {
+            "primary": "#e6ecf7",
+            "secondary": "#a3b0c8",
+            "inverse": "#0e1424",
+            "disabled": "#5d6880"
+        }
+    }
+}

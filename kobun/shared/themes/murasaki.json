@@ -1,0 +1,22 @@
+{
+    "name": "murasaki",
+    "label": "Murasaki (violeta)",
+    "colors": {
+        "background": "#1d1526",
+        "surface": "#271d33",
+        "surface_alt": "#372a47",
+        "primary": "#b39ddb",
+        "primary_hover": "#c7b3e6",
+        "border": "#33263f",
+        "border_strong": "#4c3b60",
+        "danger": "#e8837a",
+        "success": "#8fc2a4",
+        "muted": "#8a7c9c",
+        "text": {
+            "primary": "#efe9f5",
+            "secondary": "#b9adc9",
+            "inverse": "#1d1526",
+            "disabled": "#6b5f7d"
+        }
+    }
+}

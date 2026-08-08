@@ -112,11 +112,22 @@ def test_dark_falls_back_to_the_name_when_the_color_is_unreadable():
     assert roto.is_dark is True
 
 
-@pytest.mark.parametrize("name", AVAILABLE_THEMES)
-def test_only_the_dark_palette_is_dark(name):
-    theme = JsonThemeSource().load(name)
+def test_the_catalog_has_both_light_and_dark_palettes():
+    temas = [JsonThemeSource().load(n) for n in AVAILABLE_THEMES]
+    oscuros = [t.name for t in temas if t.is_dark]
+    claros = [t.name for t in temas if not t.is_dark]
 
-    assert theme.is_dark is (name == DARK_THEME)
+    assert len(oscuros) >= 2, "hacen falta varias paletas oscuras, no una sola"
+    assert len(claros) >= 2
+    assert DARK_THEME in oscuros
+    assert LIGHT_THEME in claros
+
+
+def test_light_and_dark_palettes_are_listed_grouped():
+    """Los claros van primero: la lista no debe saltar de un grupo a otro."""
+    oscuridad = [JsonThemeSource().load(n).is_dark for n in AVAILABLE_THEMES]
+
+    assert oscuridad == sorted(oscuridad), "el catálogo alterna claros y oscuros"
 
 
 def test_available_lists_the_whole_catalog_in_order():
@@ -318,24 +329,57 @@ def test_every_theme_separates_panels_from_the_background(name):
     assert ratio >= 1.05, f"{name}: los paneles no se distinguen del fondo ({ratio:.3f})"
 
 
-def test_the_light_palettes_are_visually_distinct_from_each_other():
+def channel_distance(first: str, second: str) -> int:
+    """Mayor diferencia entre canales RGB de dos colores, de 0 a 255."""
+    return max(
+        abs(int(first.lstrip("#")[i:i + 2], 16) - int(second.lstrip("#")[i:i + 2], 16))
+        for i in (0, 2, 4)
+    )
+
+
+@pytest.mark.parametrize("dark_group", [False, True], ids=["claros", "oscuros"])
+def test_palettes_of_the_same_group_are_visually_distinct(dark_group):
     """
     Lo que motivó rehacer las paletas: washi y light compartían fondo cálido y
-    acento rojo, así que no se notaba el cambio.
+    acento rojo, así que cambiar de tema no se notaba.
+
+    Se compara dentro de cada grupo; entre claros y oscuros la diferencia es
+    evidente y no hace falta medirla.
     """
-    claras = [n for n in AVAILABLE_THEMES if not JsonThemeSource().load(n).is_dark]
-    fondos = {n: JsonThemeSource().load(n).get_color("background") for n in claras}
+    temas = [JsonThemeSource().load(n) for n in AVAILABLE_THEMES]
+    grupo = [t for t in temas if t.is_dark is dark_group]
+    fondos = {t.name: t.get_color("background") for t in grupo}
 
-    assert len(set(fondos.values())) == len(claras), "hay fondos repetidos"
+    assert len(grupo) >= 2
+    assert len(set(fondos.values())) == len(grupo), "hay fondos repetidos"
 
-    for primero in claras:
-        for segundo in claras:
+    for primero in fondos:
+        for segundo in fondos:
             if primero >= segundo:
                 continue
 
-            distancia = max(
-                abs(int(fondos[primero].lstrip("#")[i:i + 2], 16)
-                    - int(fondos[segundo].lstrip("#")[i:i + 2], 16))
-                for i in (0, 2, 4)
+            distancia = channel_distance(fondos[primero], fondos[segundo])
+            assert distancia >= 8, (
+                f"{primero} y {segundo} tienen fondos casi idénticos ({distancia})"
             )
-            assert distancia >= 8, f"{primero} y {segundo} tienen fondos casi idénticos"
+
+
+def test_the_catalog_is_balanced_between_light_and_dark():
+    """
+    Mismo número de paletas claras y oscuras: quien trabaja de noche tiene
+    tantas opciones como quien trabaja de día.
+    """
+    temas = [JsonThemeSource().load(n) for n in AVAILABLE_THEMES]
+    oscuros = sum(1 for t in temas if t.is_dark)
+
+    assert oscuros == len(temas) - oscuros, f"{oscuros} oscuras contra {len(temas) - oscuros} claras"
+
+
+def test_every_theme_uses_a_distinct_accent():
+    """
+    Dos paletas con el mismo acento se confunden aunque el fondo cambie: el
+    color del botón principal es lo que más se ve.
+    """
+    acentos = {n: JsonThemeSource().load(n).get_color("primary") for n in AVAILABLE_THEMES}
+
+    assert len(set(acentos.values())) == len(acentos), f"acentos repetidos en {acentos}"

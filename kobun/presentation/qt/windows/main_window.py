@@ -80,7 +80,17 @@ class MainWindow(QMainWindow):
 
         combo.blockSignals(True)
         try:
+            grupo_oscuro = False
+
             for theme in self._theme_service.available():
+                # Con muchas paletas conviene separar claros de oscuros: la
+                # agrupación sale de la luminancia del fondo, así que un tema
+                # nuevo cae solo en su grupo.
+                if theme.is_dark and not grupo_oscuro:
+                    if combo.count():
+                        combo.insertSeparator(combo.count())
+                    grupo_oscuro = True
+
                 combo.addItem(theme.display_name, theme.name)
 
             indice = combo.findData(activo)
