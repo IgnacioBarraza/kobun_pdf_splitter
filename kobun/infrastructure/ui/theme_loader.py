@@ -31,7 +31,8 @@ class ThemeLoader:
 
             return AppTheme(
                 name=data.get("name", "unknown"),
-                colors=data.get("colors", {})
+                colors=data.get("colors", {}),
+                label=data.get("label")
             )
         except json.JSONDecodeError as e:
             raise ValueError(f"Error de formato en el JSON del tema: {str(e)}")
@@ -45,6 +46,7 @@ class ThemeLoader:
         """
         data = {
             "name": theme.name,
+            "label": theme.label,
             "colors": theme.colors
         }
         with open(path, 'w', encoding='utf-8') as f:

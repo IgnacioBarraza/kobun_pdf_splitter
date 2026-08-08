@@ -1,11 +1,12 @@
 {
     "name": "light",
+    "label": "Claro",
     "colors": {
         "background": "#faf7f5",
         "surface": "#ffffff",
         "surface_alt": "#f2ede9",
-        "primary": "#c2564b",
-        "primary_hover": "#a8483e",
+        "primary": "#bb4f44",
+        "primary_hover": "#a34137",
         "border": "#e2d9d3",
         "border_strong": "#c9bcb3",
         "danger": "#b3261e",

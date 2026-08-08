@@ -1,5 +1,6 @@
 {
     "name": "dark",
+    "label": "Oscuro",
     "colors": {
         "background": "#1c1917",
         "surface": "#262220",

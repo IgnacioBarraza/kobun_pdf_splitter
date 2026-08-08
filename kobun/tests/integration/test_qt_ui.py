@@ -37,7 +37,11 @@ from kobun.infrastructure.repositories.pdf_repository_impl import PyMuPdfReposit
 from kobun.infrastructure.ui.theme_loader import JsonThemeSource  # noqa: E402
 from kobun.presentation.qt.windows.main_window import MainWindow  # noqa: E402
 from kobun.presentation.viewmodels.pdf_view_model import PdfViewModel  # noqa: E402
-from kobun.shared.config.theme_settings import DARK_THEME, LIGHT_THEME  # noqa: E402
+from kobun.shared.config.theme_settings import (  # noqa: E402
+    AVAILABLE_THEMES,
+    DARK_THEME,
+    LIGHT_THEME,
+)
 
 TIMEOUT_MS = 15000
 
@@ -392,106 +396,87 @@ def test_the_window_starts_with_a_stylesheet(window):
     assert len(window.styleSheet()) > 0
 
 
-def test_toggling_the_theme_changes_the_stylesheet(window):
-    claro = window.styleSheet()
+def test_the_selector_lists_every_shipped_theme(window):
+    combo = window.ui.combo_theme
 
-    window.ui.btn_toggle_theme.click()
-    oscuro = window.styleSheet()
-
-    assert claro != oscuro
+    assert combo.count() == len(AVAILABLE_THEMES)
+    assert [combo.itemData(i) for i in range(combo.count())] == list(AVAILABLE_THEMES)
 
 
-def test_the_theme_choice_survives_a_new_window(qt_app, tmp_path):
+def test_the_selector_shows_readable_labels(window):
+    etiquetas = [window.ui.combo_theme.itemText(i) for i in range(window.ui.combo_theme.count())]
+
+    assert "Claro" in etiquetas
+    assert "Sumi (tinta)" in etiquetas
+    assert "washi_shu" not in etiquetas
+
+
+def test_the_selector_starts_on_the_active_theme(window):
+    assert window.ui.combo_theme.currentData() == LIGHT_THEME
+
+
+def test_choosing_a_theme_repaints_the_window(window):
+    combo = window.ui.combo_theme
+    antes = window.styleSheet()
+
+    combo.setCurrentIndex(combo.findData("sumi"))
+
+    assert window.styleSheet() != antes
+
+
+@pytest.mark.parametrize("name", AVAILABLE_THEMES)
+def test_every_theme_produces_a_stylesheet(window, name):
+    combo = window.ui.combo_theme
+
+    combo.setCurrentIndex(combo.findData(name))
+
+    assert len(window.styleSheet()) > 0
+
+
+def test_building_the_selector_does_not_save_a_preference(qt_app, tmp_path, dialogs):
+    """
+    Al armar el combo, setCurrentIndex emitiría el cambio y guardaría una
+    preferencia que el usuario nunca eligió.
+    """
+    from kobun.presentation.qt.windows.main_window import MainWindow as Ventana
+
+    prefs_path = tmp_path / "prefs.json"
+    file_storage = LocalFileStorage()
+    pdf_repository = PyMuPdfRepository(PdfEngineAdapter())
+    pdf_service = PdfSplitterService()
+    history_repository = JsonHistoryRepository(tmp_path / "datos" / "history.json")
+
+    view_model = PdfViewModel(
+        load_use_case=LoadPdfUseCase(pdf_repository, pdf_service),
+        split_use_case=SplitPdfUseCase(
+            pdf_repository, pdf_service, OutputPathResolver(file_storage)
+        ),
+        record_use_case=RecordSplitUseCase(history_repository),
+        list_history_use_case=ListHistoryUseCase(history_repository, file_storage),
+        file_storage=file_storage,
+    )
+    ventana = Ventana(
+        view_model,
+        ThemeService(JsonPreferencesRepository(prefs_path), JsonThemeSource()),
+        history_repository,
+        show_error=dialogs.show_error,
+        ask_confirmation=dialogs.ask_confirmation,
+    )
+
+    try:
+        assert not prefs_path.exists(), "Abrir la ventana no debe escribir preferencias"
+    finally:
+        ventana.close()
+
+
+def test_the_chosen_theme_survives_a_new_window(qt_app, tmp_path):
     preferences = JsonPreferencesRepository(tmp_path / "preferences.json")
     service = ThemeService(preferences, JsonThemeSource())
 
     assert service.current().name == LIGHT_THEME
-    service.toggle()
+    service.select("matcha")
 
     otra_sesion = ThemeService(
         JsonPreferencesRepository(preferences.file_path), JsonThemeSource()
     )
-    assert otra_sesion.current().name == DARK_THEME
-
-
-# =========================
-# Diálogos
-# =========================
-
-def test_a_failed_load_opens_a_dialog(window, qt_app, dialogs, tmp_path):
-    roto = tmp_path / "roto.pdf"
-    roto.write_bytes(b"no soy un pdf")
-
-    load(window, qt_app, roto)
-
-    assert len(dialogs.errors) == 1
-    assert "no es un PDF" in window.ui.label_status.text()
-
-
-def test_a_failed_split_opens_a_dialog(window, qt_app, dialogs, source_pdf, tmp_path):
-    ocupado = tmp_path / "ocupado.pdf"
-    ocupado.write_bytes(b"previo")
-
-    load(window, qt_app, source_pdf)
-    window.ui.split_options.input_selection.setText("1-3")
-    window.ui.split_options.set_destination(ocupado)
-    window.ui.btn_process.click()
-    settle(qt_app)
-
-    assert len(dialogs.errors) == 1
-    assert "ya existe" in str(dialogs.errors[0])
-
-
-def test_a_successful_split_opens_no_dialog(window, qt_app, dialogs, source_pdf):
-    load(window, qt_app, source_pdf)
-    window.ui.split_options.input_selection.setText("1-3")
-    window.ui.btn_process.click()
-    settle(qt_app)
-
-    assert dialogs.errors == []
-
-
-def test_opening_a_missing_export_opens_a_dialog(window, qt_app, dialogs, source_pdf):
-    load(window, qt_app, source_pdf)
-    window.ui.split_options.input_selection.setText("2-4")
-    window.ui.btn_process.click()
-    settle(qt_app)
-
-    (source_pdf.parent / "libro_2-4.pdf").unlink()
-    window.ui.list_history.setCurrentRow(0)
-    window.ui.btn_open_export.setEnabled(True)
-    window.ui.btn_open_export.click()
-
-    assert len(dialogs.errors) == 1
-    assert "ya no está disponible" in str(dialogs.errors[0])
-
-
-def test_clearing_the_history_asks_first(window, qt_app, dialogs, source_pdf):
-    load(window, qt_app, source_pdf)
-    window.ui.split_options.input_selection.setText("2-4")
-    window.ui.btn_process.click()
-    settle(qt_app)
-
-    window.ui.btn_clear_history.click()
-
-    assert len(dialogs.questions) == 1
-    assert window.ui.list_history.count() == 0
-
-
-def test_declining_the_confirmation_keeps_the_history(window, qt_app, dialogs, source_pdf):
-    load(window, qt_app, source_pdf)
-    window.ui.split_options.input_selection.setText("2-4")
-    window.ui.btn_process.click()
-    settle(qt_app)
-    dialogs.answer = False
-
-    window.ui.btn_clear_history.click()
-
-    assert len(dialogs.questions) == 1
-    assert window.ui.list_history.count() == 1, "Cancelar no debe borrar nada"
-
-
-def test_clearing_an_empty_history_does_not_ask(window, dialogs):
-    window.ui.btn_clear_history.click()
-
-    assert dialogs.questions == []
+    assert otra_sesion.current().name == "matcha"

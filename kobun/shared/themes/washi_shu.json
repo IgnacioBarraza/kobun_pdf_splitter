@@ -1,21 +1,22 @@
 {
     "name": "washi_shu",
+    "label": "Washi (papel y rojo)",
     "colors": {
-        "background": "#f4efe4",
-        "surface": "#fbf8f1",
-        "surface_alt": "#ebe3d3",
-        "primary": "#c4422e",
-        "primary_hover": "#a83725",
-        "border": "#ddd3bf",
-        "border_strong": "#c2b49a",
-        "danger": "#a8322a",
-        "success": "#5d7a4a",
-        "muted": "#9b8f7a",
+        "background": "#ece0c8",
+        "surface": "#f7efdd",
+        "surface_alt": "#ddcda8",
+        "primary": "#b83218",
+        "primary_hover": "#9a2711",
+        "border": "#d3c09a",
+        "border_strong": "#b8a075",
+        "danger": "#9e2b1e",
+        "success": "#546b3c",
+        "muted": "#94815f",
         "text": {
-            "primary": "#26211c",
-            "secondary": "#6e6353",
-            "inverse": "#fbf8f1",
-            "disabled": "#b3a893"
+            "primary": "#2a2118",
+            "secondary": "#6d5c44",
+            "inverse": "#fbf5e8",
+            "disabled": "#a89372"
         }
     }
 }

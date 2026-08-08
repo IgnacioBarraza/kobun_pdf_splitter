@@ -1,21 +1,22 @@
 {
     "name": "sumi",
+    "label": "Sumi (tinta)",
     "colors": {
-        "background": "#f6f4f1",
-        "surface": "#ffffff",
-        "surface_alt": "#eae7e2",
-        "primary": "#2f2b28",
-        "primary_hover": "#171412",
-        "border": "#e0dbd4",
-        "border_strong": "#bfb8ae",
-        "danger": "#b23a2f",
-        "success": "#4a6b52",
-        "muted": "#9c948a",
+        "background": "#eeeeec",
+        "surface": "#fafafa",
+        "surface_alt": "#dedede",
+        "primary": "#1a1a1a",
+        "primary_hover": "#000000",
+        "border": "#d2d2d0",
+        "border_strong": "#b0b0ae",
+        "danger": "#a82a1e",
+        "success": "#3f6b4a",
+        "muted": "#8f8f8d",
         "text": {
-            "primary": "#1a1714",
-            "secondary": "#6b635a",
-            "inverse": "#ffffff",
-            "disabled": "#b5aca2"
+            "primary": "#121212",
+            "secondary": "#5c5c5a",
+            "inverse": "#fafafa",
+            "disabled": "#a8a8a6"
         }
     }
 }

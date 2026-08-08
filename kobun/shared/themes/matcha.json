@@ -1,21 +1,22 @@
 {
     "name": "matcha",
+    "label": "Matcha (verde té)",
     "colors": {
-        "background": "#f3f1e3",
-        "surface": "#fbfaf2",
-        "surface_alt": "#e6e5d0",
-        "primary": "#6b7d43",
-        "primary_hover": "#566633",
-        "border": "#d9d7c0",
-        "border_strong": "#bcb99c",
-        "danger": "#a8503a",
-        "success": "#4f7a52",
-        "muted": "#94917a",
+        "background": "#e4e8cf",
+        "surface": "#f2f5e3",
+        "surface_alt": "#cfd7b1",
+        "primary": "#55692e",
+        "primary_hover": "#41521f",
+        "border": "#c5cfa6",
+        "border_strong": "#a7b382",
+        "danger": "#96412c",
+        "success": "#436a3b",
+        "muted": "#86906a",
         "text": {
-            "primary": "#232519",
-            "secondary": "#63654f",
-            "inverse": "#fbfaf2",
-            "disabled": "#adab92"
+            "primary": "#1f2413",
+            "secondary": "#55603c",
+            "inverse": "#f5f7e8",
+            "disabled": "#9aa578"
         }
     }
 }

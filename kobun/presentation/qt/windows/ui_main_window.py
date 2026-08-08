@@ -1,5 +1,6 @@
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QComboBox,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -71,8 +72,12 @@ class Ui_MainWindow:
 
         layout.addStretch()
 
-        self.btn_toggle_theme = QPushButton("Cambiar tema")
-        layout.addWidget(self.btn_toggle_theme)
+        self.label_theme = QLabel("Tema")
+        self.label_theme.setObjectName("SecondaryText")
+        layout.addWidget(self.label_theme)
+
+        self.combo_theme = QComboBox()
+        layout.addWidget(self.combo_theme)
 
         return self.sidebar
 

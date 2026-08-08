@@ -17,10 +17,7 @@ from kobun.shared.config.theme_settings import (
     AVAILABLE_THEMES,
     DARK_THEME,
     LIGHT_THEME,
-    PREVIEW_THEMES,
-    SHIPPED_THEMES,
     is_known_theme,
-    opposite_theme,
     theme_file,
 )
 from kobun.shared.theme import AppTheme
@@ -57,15 +54,15 @@ class FakeThemeSource(ThemeSource):
 # Catálogo de temas
 # =========================
 
-@pytest.mark.parametrize("name", SHIPPED_THEMES)
+@pytest.mark.parametrize("name", AVAILABLE_THEMES)
 def test_shipped_themes_exist_and_are_loadable(name):
-    """Incluye las paletas de vista previa: si se rompen, nadie se enteraría."""
+    """Cada paleta del catálogo debe poder cargarse."""
     theme = JsonThemeSource().load(name)
 
     assert theme.name == name
 
 
-@pytest.mark.parametrize("name", SHIPPED_THEMES)
+@pytest.mark.parametrize("name", AVAILABLE_THEMES)
 def test_shipped_themes_define_every_token_the_stylesheet_uses(name):
     """
     Regresión: los JSON estuvieron vacíos y la ventana no podía pintarse.
@@ -82,46 +79,77 @@ def test_shipped_themes_define_every_token_the_stylesheet_uses(name):
     assert requeridos_texto <= colores["text"].keys(), f"faltan tokens de texto en {name}"
 
 
-@pytest.mark.parametrize("name", PREVIEW_THEMES)
-def test_preview_themes_are_shipped_but_not_selectable(name):
-    """
-    Están en el paquete para poder compararlas, pero fuera del selector: ni el
-    toggle ni un preferences.json editado a mano deberían poder activarlas.
-    """
-    assert theme_file(name).exists()
-    assert not is_known_theme(name)
-    assert name not in AVAILABLE_THEMES
+@pytest.mark.parametrize("name", AVAILABLE_THEMES)
+def test_every_shipped_theme_declares_a_label(name):
+    """El selector muestra `label`; sin él la fila diría "washi_shu"."""
+    theme = JsonThemeSource().load(name)
+
+    assert theme.label
+    assert theme.display_name == theme.label
 
 
-@pytest.mark.parametrize("name", PREVIEW_THEMES)
-def test_selecting_a_preview_theme_falls_back_to_the_default(name):
+def test_display_name_falls_back_to_a_readable_name():
+    sin_etiqueta = AppTheme(name="washi_shu", colors={"background": "#ffffff"})
+
+    assert sin_etiqueta.display_name == "Washi Shu"
+
+
+def test_dark_is_detected_from_the_background_not_the_name():
+    """
+    Con varias paletas el nombre dejó de ser confiable: una oscura que no se
+    llame "dark" recibiría el ícono de flecha equivocado.
+    """
+    oscura = AppTheme(name="yozora", colors={"background": "#14110f"})
+    clara = AppTheme(name="tenebroso", colors={"background": "#faf7f5"})
+
+    assert oscura.is_dark is True
+    assert clara.is_dark is False
+
+
+def test_dark_falls_back_to_the_name_when_the_color_is_unreadable():
+    roto = AppTheme(name="dark", colors={"background": "no-es-un-color"})
+
+    assert roto.is_dark is True
+
+
+@pytest.mark.parametrize("name", AVAILABLE_THEMES)
+def test_only_the_dark_palette_is_dark(name):
+    theme = JsonThemeSource().load(name)
+
+    assert theme.is_dark is (name == DARK_THEME)
+
+
+def test_available_lists_the_whole_catalog_in_order():
+    service = ThemeService(InMemoryPreferences(), JsonThemeSource())
+
+    assert [t.name for t in service.available()] == list(AVAILABLE_THEMES)
+
+
+def test_available_skips_themes_that_cannot_be_loaded():
+    """Vale más un selector incompleto que una ventana que no abre."""
+    source = FakeThemeSource(broken={"matcha", "sumi"})
+    service = ThemeService(InMemoryPreferences(), source)
+
+    nombres = [t.name for t in service.available()]
+
+    assert "matcha" not in nombres
+    assert LIGHT_THEME in nombres
+    assert len(nombres) == len(AVAILABLE_THEMES) - 2
+
+
+@pytest.mark.parametrize("name", AVAILABLE_THEMES)
+def test_any_catalog_theme_can_be_selected_and_persisted(name):
     preferences = InMemoryPreferences()
     service = ThemeService(preferences, JsonThemeSource())
 
-    assert service.select(name).name == DEFAULT_THEME_NAME
-    assert preferences.preferences.theme_name == DEFAULT_THEME_NAME
-
-
-def test_toggling_never_reaches_a_preview_theme():
-    service = ThemeService(InMemoryPreferences(), JsonThemeSource())
-
-    vistos = {service.toggle().name for _ in range(6)}
-
-    assert vistos == set(AVAILABLE_THEMES)
+    assert service.select(name).name == name
+    assert preferences.preferences.theme_name == name
+    assert service.current().name == name
 
 
 def test_theme_paths_are_package_relative():
     assert theme_file(LIGHT_THEME).is_absolute()
     assert theme_file(LIGHT_THEME).exists()
-
-
-def test_opposite_theme_alternates():
-    assert opposite_theme(LIGHT_THEME) == DARK_THEME
-    assert opposite_theme(DARK_THEME) == LIGHT_THEME
-
-
-def test_opposite_of_an_unknown_theme_still_does_something():
-    assert opposite_theme("neon") in AVAILABLE_THEMES
 
 
 def test_is_known_theme():
@@ -144,26 +172,6 @@ def test_current_uses_the_saved_preference():
     service = ThemeService(preferences, FakeThemeSource())
 
     assert service.current().name == DARK_THEME
-
-
-def test_toggle_switches_and_persists():
-    preferences = InMemoryPreferences(AppPreferences(theme_name=LIGHT_THEME))
-    service = ThemeService(preferences, FakeThemeSource())
-
-    theme = service.toggle()
-
-    assert theme.name == DARK_THEME
-    assert preferences.preferences.theme_name == DARK_THEME
-
-
-def test_toggle_twice_returns_to_the_start():
-    service = ThemeService(InMemoryPreferences(), FakeThemeSource())
-
-    primero = service.toggle().name
-    segundo = service.toggle().name
-
-    assert primero != segundo
-    assert segundo == DEFAULT_THEME_NAME
 
 
 def test_selecting_an_unknown_theme_falls_back_to_the_default():
@@ -239,3 +247,95 @@ def test_preferences_leave_no_temporary_file(tmp_path):
     repositorio.save(AppPreferences(theme_name=DARK_THEME))
 
     assert list(tmp_path.glob("*.tmp")) == []
+
+
+# =========================
+# Legibilidad
+# =========================
+
+MIN_CONTRAST = 4.5
+"""Mínimo de WCAG AA para texto normal."""
+
+
+def _relative_luminance(hex_color: str) -> float:
+    raw = hex_color.lstrip("#")
+    canales = [int(raw[i:i + 2], 16) / 255 for i in (0, 2, 4)]
+    canales = [c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4 for c in canales]
+
+    return 0.2126 * canales[0] + 0.7152 * canales[1] + 0.0722 * canales[2]
+
+
+def contrast_ratio(first: str, second: str) -> float:
+    """Relación de contraste entre dos colores, de 1 (igual) a 21 (blanco/negro)."""
+    primera, segunda = _relative_luminance(first), _relative_luminance(second)
+
+    return (max(primera, segunda) + 0.05) / (min(primera, segunda) + 0.05)
+
+
+def test_contrast_ratio_matches_known_values():
+    """Ancla del cálculo: blanco sobre negro es el máximo posible."""
+    assert contrast_ratio("#ffffff", "#000000") == pytest.approx(21.0, abs=0.01)
+    assert contrast_ratio("#777777", "#777777") == pytest.approx(1.0, abs=0.01)
+
+
+@pytest.mark.parametrize("name", AVAILABLE_THEMES)
+def test_every_theme_keeps_text_readable(name):
+    """
+    Ninguna paleta puede entrar con texto ilegible.
+
+    Detectó que el rojo original del tema claro daba 4.44 con el texto blanco
+    del botón principal, justo por debajo del mínimo.
+    """
+    theme = JsonThemeSource().load(name)
+    fondo = theme.get_color("background")
+    panel = theme.get_color("surface")
+
+    combinaciones = {
+        "texto sobre fondo": (theme.get_text_color("primary"), fondo),
+        "texto sobre panel": (theme.get_text_color("primary"), panel),
+        "texto secundario sobre fondo": (theme.get_text_color("secondary"), fondo),
+        "texto del botón sobre el acento": (
+            theme.get_text_color("inverse"),
+            theme.get_color("primary"),
+        ),
+    }
+
+    for descripcion, (frente, atras) in combinaciones.items():
+        ratio = contrast_ratio(frente, atras)
+        assert ratio >= MIN_CONTRAST, f"{name}: {descripcion} da {ratio:.2f}"
+
+
+@pytest.mark.parametrize("name", AVAILABLE_THEMES)
+def test_every_theme_separates_panels_from_the_background(name):
+    """
+    Si `surface` es casi idéntico al fondo, los paneles desaparecen y todas
+    las paletas se ven iguales.
+    """
+    theme = JsonThemeSource().load(name)
+
+    ratio = contrast_ratio(theme.get_color("surface"), theme.get_color("background"))
+
+    assert ratio >= 1.05, f"{name}: los paneles no se distinguen del fondo ({ratio:.3f})"
+
+
+def test_the_light_palettes_are_visually_distinct_from_each_other():
+    """
+    Lo que motivó rehacer las paletas: washi y light compartían fondo cálido y
+    acento rojo, así que no se notaba el cambio.
+    """
+    claras = [n for n in AVAILABLE_THEMES if not JsonThemeSource().load(n).is_dark]
+    fondos = {n: JsonThemeSource().load(n).get_color("background") for n in claras}
+
+    assert len(set(fondos.values())) == len(claras), "hay fondos repetidos"
+
+    for primero in claras:
+        for segundo in claras:
+            if primero >= segundo:
+                continue
+
+            distancia = max(
+                abs(int(fondos[primero].lstrip("#")[i:i + 2], 16)
+                    - int(fondos[segundo].lstrip("#")[i:i + 2], 16))
+                for i in (0, 2, 4)
+            )
+            assert distancia >= 8, f"{primero} y {segundo} tienen fondos casi idénticos"

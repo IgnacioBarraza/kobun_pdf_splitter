@@ -52,6 +52,7 @@ class MainWindow(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
+        self._populate_themes()
         self.apply_theme(self._theme_service.current())
         self._connect()
         self._view_model.refresh_history()
@@ -63,8 +64,36 @@ class MainWindow(QMainWindow):
     def apply_theme(self, theme) -> None:
         self.setStyleSheet(StyleGenerator.generate(theme))
 
-    def toggle_theme(self) -> None:
-        self.apply_theme(self._theme_service.toggle())
+    def select_theme(self, theme_name: str) -> None:
+        self.apply_theme(self._theme_service.select(theme_name))
+
+    def _populate_themes(self) -> None:
+        """
+        Carga el catálogo y preselecciona el tema activo.
+
+        Las señales se bloquean mientras se arma la lista: `setCurrentIndex`
+        emitiría `currentIndexChanged` y volvería a guardar la preferencia
+        durante el arranque, por un cambio que el usuario no hizo.
+        """
+        combo = self.ui.combo_theme
+        activo = self._theme_service.current().name
+
+        combo.blockSignals(True)
+        try:
+            for theme in self._theme_service.available():
+                combo.addItem(theme.display_name, theme.name)
+
+            indice = combo.findData(activo)
+            if indice >= 0:
+                combo.setCurrentIndex(indice)
+        finally:
+            combo.blockSignals(False)
+
+    def _on_theme_chosen(self, index: int) -> None:
+        name = self.ui.combo_theme.itemData(index)
+
+        if name:
+            self.select_theme(str(name))
 
     # =========================
     # Cableado
@@ -75,7 +104,7 @@ class MainWindow(QMainWindow):
 
         ui.btn_split.clicked.connect(lambda: ui.pages.setCurrentIndex(SPLIT_PAGE))
         ui.btn_history.clicked.connect(self._show_history)
-        ui.btn_toggle_theme.clicked.connect(self.toggle_theme)
+        ui.combo_theme.currentIndexChanged.connect(self._on_theme_chosen)
 
         ui.drop_area.file_dropped.connect(self._on_file_chosen)
         ui.split_options.selection_changed.connect(self._on_selection_changed)

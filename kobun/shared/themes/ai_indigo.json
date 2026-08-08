@@ -1,21 +1,22 @@
 {
     "name": "ai_indigo",
+    "label": "Ai (índigo)",
     "colors": {
-        "background": "#f2f2ee",
-        "surface": "#fafaf7",
-        "surface_alt": "#e6e7e1",
-        "primary": "#2c4a6e",
-        "primary_hover": "#1f3855",
-        "border": "#d5d7cf",
-        "border_strong": "#b5b9ae",
-        "danger": "#a8322a",
-        "success": "#4a7a63",
-        "muted": "#8b8f85",
+        "background": "#e6ebf2",
+        "surface": "#f4f7fb",
+        "surface_alt": "#d3dceb",
+        "primary": "#1f3a63",
+        "primary_hover": "#142a4a",
+        "border": "#c2cee0",
+        "border_strong": "#a0b1c9",
+        "danger": "#a3302a",
+        "success": "#396857",
+        "muted": "#7d8a9c",
         "text": {
-            "primary": "#1d2229",
-            "secondary": "#5f6670",
-            "inverse": "#fafaf7",
-            "disabled": "#aab0a6"
+            "primary": "#16202e",
+            "secondary": "#4f5f75",
+            "inverse": "#f4f7fb",
+            "disabled": "#94a3b8"
         }
     }
 }
