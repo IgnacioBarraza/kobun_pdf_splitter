@@ -76,11 +76,16 @@ class PdfSplitterService:
         """
         Construye la metadata del PDF resultante derivándola del original,
         para que el archivo exportado sea trazable hasta su fuente.
+
+        El título nunca lleva la extensión: es un título de documento, no un
+        nombre de archivo. El `subject` sí conserva el nombre completo, porque
+        ahí lo que importa es poder identificar el archivo de origen.
         """
         source_meta = source_doc.metadata
+        base = source_meta.title or PurePath(source_doc.filename).stem
 
         return PdfMetadata(
-            title=f"{source_meta.title or source_doc.filename} ({selection})",
+            title=f"{base} ({selection})",
             author=source_meta.author,
             subject=f"Páginas {selection} extraídas de {source_doc.filename}",
             keywords=source_meta.keywords,

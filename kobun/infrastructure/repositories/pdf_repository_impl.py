@@ -116,6 +116,10 @@ class PyMuPdfRepository(PdfRepository):
 
         `creationDate` se ignora a propósito: viene en formato PDF
         ("D:20260804120000Z") y aún no hay parser hacia datetime.
+
+        El título de respaldo usa el nombre **sin extensión**: es un título de
+        documento, no un nombre de archivo, y arrastrar el ".pdf" terminaba
+        produciendo títulos como "contrato.pdf (3-6)" en lo exportado.
         """
         doc = self._open_engine_document(file_path)
 
@@ -126,7 +130,7 @@ class PyMuPdfRepository(PdfRepository):
             self.engine.close_document(doc)
 
         domain_metadata = PdfMetadata(
-            title=raw_meta.get("title") or file_path.name,
+            title=raw_meta.get("title") or file_path.stem,
             author=raw_meta.get("author") or "Unknown",
             subject=raw_meta.get("subject") or "Unknown",
             keywords=raw_meta.get("keywords") or None,

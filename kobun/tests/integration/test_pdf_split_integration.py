@@ -131,6 +131,38 @@ def test_derived_metadata_is_written_to_the_output_file(use_case, source_pdf, tm
     assert metadata["creator"] == "Kobun PDF Utility"
 
 
+def test_a_source_without_title_yields_a_clean_derived_title(use_case, tmp_path):
+    """
+    Caso real: un PDF sin metadata de título dejaba el archivo exportado con
+    un título como "contrato.pdf (3-6)".
+    """
+    sin_titulo = tmp_path / "2026.03.01_Contrato_Indefinido.pdf"
+    doc = pymupdf.open()
+    for _ in range(8):
+        doc.new_page()
+    doc.save(sin_titulo)
+    doc.close()
+
+    resultado = use_case.execute(SplitPdfRequest(sin_titulo, PageSelection.parse("3-6")))
+    metadata = read_metadata(resultado.output_path)
+
+    assert metadata["title"] == "2026.03.01_Contrato_Indefinido (3-6)"
+    assert ".pdf" not in metadata["title"]
+
+
+def test_open_document_derives_a_title_without_the_extension(repository, tmp_path):
+    sin_titulo = tmp_path / "apunte.pdf"
+    doc = pymupdf.open()
+    doc.new_page()
+    doc.save(sin_titulo)
+    doc.close()
+
+    document = repository.open_document(sin_titulo)
+
+    assert document.metadata.title == "apunte"
+    assert document.filename == "apunte.pdf", "el nombre del archivo sí conserva la extensión"
+
+
 def test_selection_beyond_document_fails_with_domain_error(use_case, source_pdf, tmp_path):
     with pytest.raises(InvalidPageRangeException):
         use_case.execute(SplitPdfRequest(source_pdf, PageSelection.parse("28-40"), tmp_path / "nope.pdf"))

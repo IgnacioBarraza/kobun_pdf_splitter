@@ -54,7 +54,11 @@ def test_split_metadata_derives_from_source(service, make_pdf_document):
     assert "tesis.pdf" in result.subject
 
 
-def test_split_metadata_falls_back_to_filename_when_title_missing(service, make_pdf_document):
+def test_split_metadata_falls_back_to_filename_without_its_extension(service, make_pdf_document):
+    """
+    El título es un título de documento, no un nombre de archivo: arrastrar el
+    ".pdf" producía cosas como "contrato.pdf (3-6)" en lo exportado.
+    """
     document = make_pdf_document(
         filename="sin_titulo.pdf",
         metadata=PdfMetadata(author="Ignacio"),
@@ -62,7 +66,32 @@ def test_split_metadata_falls_back_to_filename_when_title_missing(service, make_
 
     result = service.prepare_split_metadata(document, PageSelection.parse("1-2"))
 
-    assert result.title == "sin_titulo.pdf (1-2)"
+    assert result.title == "sin_titulo (1-2)"
+    assert ".pdf" not in result.title
+
+
+def test_split_metadata_keeps_dots_that_belong_to_the_name(service, make_pdf_document):
+    """Sólo se quita la última extensión, no todo lo que haya después de un punto."""
+    document = make_pdf_document(
+        filename="2026.03.01_Contrato_Indefinido.pdf",
+        metadata=PdfMetadata(author="Ignacio"),
+    )
+
+    result = service.prepare_split_metadata(document, PageSelection.parse("3-6"))
+
+    assert result.title == "2026.03.01_Contrato_Indefinido (3-6)"
+
+
+def test_split_metadata_subject_keeps_the_full_filename(service, make_pdf_document):
+    """
+    En el subject sí interesa el nombre completo: sirve para identificar el
+    archivo de origen en el disco.
+    """
+    document = make_pdf_document(filename="contrato.pdf", metadata=PdfMetadata(author="I"))
+
+    result = service.prepare_split_metadata(document, PageSelection.parse("1"))
+
+    assert "contrato.pdf" in result.subject
 
 
 def test_split_metadata_reflects_discontinuous_selection(service, make_pdf_document):
