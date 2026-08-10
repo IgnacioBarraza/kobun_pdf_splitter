@@ -7,6 +7,8 @@ operativo ni del entorno. La resolución de rutas concretas vive en
 """
 from pathlib import Path
 
+from kobun.shared.resources import data_path
+
 APP_NAME = "Kobun"
 """Nombre visible. Se usa como nombre de carpeta en Windows y macOS, donde la
 convención es capitalizada."""
@@ -31,13 +33,14 @@ MAX_HISTORY_ENTRIES = 50
 """Tope de exportaciones recordadas. Más allá de esto la lista deja de ser
 consultable y el archivo crece sin sentido."""
 
-THEMES_DIRECTORY = Path(__file__).resolve().parent.parent / "themes"
+THEMES_DIRECTORY = data_path("themes")
 """Ubicación de los temas incluidos con la app.
 
-Se resuelve relativa al paquete y no al directorio de trabajo: de lo contrario
-la app sólo encuentra sus temas si se la lanza desde la raíz del proyecto."""
+Se resuelve contra el paquete y no contra el directorio de trabajo ni la ruta
+de este archivo: así sigue valiendo dentro de un ejecutable empaquetado, donde
+el código y los datos no quedan uno al lado del otro."""
 
-ICONS_DIRECTORY = Path(__file__).resolve().parent.parent / "icons"
+ICONS_DIRECTORY = data_path("icons")
 """Icono de la aplicación, en varios tamaños."""
 
 APP_ICON_SIZES = (16, 24, 32, 48, 64, 128, 256)
