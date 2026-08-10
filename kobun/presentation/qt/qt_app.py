@@ -20,6 +20,7 @@ from kobun.infrastructure.repositories.json_preferences_repository import (
 from kobun.infrastructure.repositories.pdf_repository_impl import PyMuPdfRepository
 from kobun.infrastructure.ui.theme_loader import JsonThemeSource
 from kobun.presentation.qt.app_icon import load_app_icon
+from kobun.presentation.qt.cli_arguments import first_pdf_argument
 from kobun.presentation.qt.windows.main_window import MainWindow
 from kobun.presentation.viewmodels.pdf_view_model import PdfViewModel
 from kobun.shared.config.app_settings import (
@@ -89,5 +90,12 @@ def run(argv: Optional[List[str]] = None) -> int:
 
     window = KobunApplication().build_window()
     window.show()
+
+    # Un PDF pasado por línea de comandos —o elegido desde "Abrir con" en el
+    # explorador— se carga por el mismo camino que el drag & drop, así que
+    # hereda su validación y su manejo de errores.
+    pdf = first_pdf_argument(argv if argv is not None else sys.argv)
+    if pdf is not None:
+        window.open_document(pdf)
 
     return app.exec()

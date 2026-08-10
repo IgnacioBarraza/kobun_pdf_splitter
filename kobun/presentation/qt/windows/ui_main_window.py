@@ -199,6 +199,10 @@ class Ui_MainWindow:
         self.btn_open_export.setEnabled(False)
         actions.addWidget(self.btn_open_export)
 
+        self.btn_forget_export = QPushButton("Quitar de la lista")
+        self.btn_forget_export.setEnabled(False)
+        actions.addWidget(self.btn_forget_export)
+
         self.btn_clear_history = QPushButton("Limpiar historial")
         actions.addWidget(self.btn_clear_history)
 

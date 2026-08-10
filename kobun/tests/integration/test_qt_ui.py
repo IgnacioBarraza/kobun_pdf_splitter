@@ -560,3 +560,140 @@ def test_the_icon_keeps_its_transparent_corners(window):
 
     assert imagen.pixelColor(0, 0).alpha() == 0, "la esquina no es transparente"
     assert imagen.pixelColor(32, 32).alpha() == 255, "el centro debería ser opaco"
+
+
+# =========================
+# Apertura desde afuera de la ventana
+# =========================
+
+def test_open_document_loads_a_pdf_from_outside(window, qt_app, source_pdf):
+    """
+    Es el camino del "Abrir con" del explorador y de la línea de comandos.
+    """
+    window.open_document(source_pdf)
+    settle(qt_app)
+
+    assert window.ui.drop_area.label_file.text() == "libro.pdf"
+    assert window.ui.split_options.label_folder.toolTip() == str(source_pdf.parent)
+
+
+def test_open_document_switches_to_the_split_page(window, qt_app, source_pdf):
+    """Si la app arranca en el historial, el archivo abierto no se vería."""
+    window.ui.btn_history.click()
+    settle(qt_app)
+
+    window.open_document(source_pdf)
+    settle(qt_app)
+
+    assert window.ui.pages.currentIndex() == 0
+    assert window.ui.btn_split.isChecked()
+
+
+def test_open_document_reports_a_bad_file_like_the_drop_area(window, qt_app, dialogs, tmp_path):
+    roto = tmp_path / "roto.pdf"
+    roto.write_bytes(b"no soy un pdf")
+
+    window.open_document(roto)
+    settle(qt_app)
+
+    assert len(dialogs.errors) == 1
+    assert "no es un PDF" in window.ui.label_status.text()
+
+
+# =========================
+# Quitar una entrada del historial
+# =========================
+
+def export(window, qt_app, source_pdf, seleccion="2-4"):
+    load(window, qt_app, source_pdf)
+    window.ui.split_options.input_selection.setText(seleccion)
+    window.ui.btn_process.click()
+    settle(qt_app)
+
+
+def test_forget_removes_only_the_selected_entry(window, qt_app, source_pdf):
+    export(window, qt_app, source_pdf, "2-4")
+    export(window, qt_app, source_pdf, "8-9")
+    window.ui.btn_history.click()
+    settle(qt_app)
+    assert window.ui.list_history.count() == 2
+
+    window.ui.list_history.setCurrentRow(0)
+    quitado = window.ui.list_history.item(0).text()
+    window.ui.btn_forget_export.click()
+    settle(qt_app)
+
+    assert window.ui.list_history.count() == 1
+    assert window.ui.list_history.item(0).text() != quitado
+
+
+def test_forget_does_not_delete_the_pdf(window, qt_app, source_pdf):
+    """Se pierde el registro, no el archivo."""
+    export(window, qt_app, source_pdf, "2-4")
+    generado = source_pdf.parent / "libro_2-4.pdf"
+
+    window.ui.btn_history.click()
+    settle(qt_app)
+    window.ui.list_history.setCurrentRow(0)
+    window.ui.btn_forget_export.click()
+    settle(qt_app)
+
+    assert generado.exists()
+    assert window.ui.list_history.count() == 0
+
+
+def test_forget_asks_no_confirmation(window, qt_app, dialogs, source_pdf):
+    """Sólo lo irreversible pregunta; si todo pregunta, nadie lee."""
+    export(window, qt_app, source_pdf, "2-4")
+    window.ui.btn_history.click()
+    settle(qt_app)
+    window.ui.list_history.setCurrentRow(0)
+
+    window.ui.btn_forget_export.click()
+
+    assert dialogs.questions == []
+
+
+def test_forget_is_available_for_dead_entries_but_open_is_not(window, qt_app, source_pdf):
+    """
+    Es justamente el caso que motivó el botón: un archivo que ya no está y que
+    antes sólo se podía sacar borrando todo el historial.
+    """
+    export(window, qt_app, source_pdf, "2-4")
+    (source_pdf.parent / "libro_2-4.pdf").unlink()
+
+    window.ui.btn_history.click()
+    settle(qt_app)
+    window.ui.list_history.setCurrentRow(0)
+
+    assert window.ui.btn_open_export.isEnabled() is False
+    assert window.ui.btn_forget_export.isEnabled() is True
+
+    window.ui.btn_forget_export.click()
+    settle(qt_app)
+
+    assert window.ui.list_history.count() == 0
+
+
+def test_forget_is_disabled_without_a_selection(window, qt_app, source_pdf):
+    export(window, qt_app, source_pdf, "2-4")
+    window.ui.btn_history.click()
+    settle(qt_app)
+    window.ui.list_history.setCurrentRow(-1)
+
+    assert window.ui.btn_forget_export.isEnabled() is False
+
+
+def test_forgetting_survives_a_reload(window, qt_app, source_pdf):
+    """La eliminación se persiste, no sólo se quita de la lista en pantalla."""
+    export(window, qt_app, source_pdf, "2-4")
+    window.ui.btn_history.click()
+    settle(qt_app)
+    window.ui.list_history.setCurrentRow(0)
+    window.ui.btn_forget_export.click()
+    settle(qt_app)
+
+    window._view_model.refresh_history()
+    settle(qt_app)
+
+    assert window.ui.list_history.count() == 0

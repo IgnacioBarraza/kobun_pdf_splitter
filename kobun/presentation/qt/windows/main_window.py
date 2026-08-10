@@ -125,6 +125,7 @@ class MainWindow(QMainWindow):
         ui.list_history.itemSelectionChanged.connect(self._on_history_selection_changed)
         ui.list_history.itemDoubleClicked.connect(self._open_history_item)
         ui.btn_open_export.clicked.connect(self._open_selected_export)
+        ui.btn_forget_export.clicked.connect(self._forget_selected_export)
         ui.btn_clear_history.clicked.connect(self._clear_history)
 
         self._view_model.document_loaded.connect(self._on_document_loaded)
@@ -143,6 +144,16 @@ class MainWindow(QMainWindow):
     # =========================
     # Carga
     # =========================
+
+    def open_document(self, path: Path) -> None:
+        """
+        Carga un PDF desde fuera de la ventana: la línea de comandos, o el
+        "Abrir con" del explorador. Reusa el mismo camino que el drag & drop,
+        incluidos su validación y sus mensajes de error.
+        """
+        self.ui.pages.setCurrentIndex(SPLIT_PAGE)
+        self.ui.btn_split.setChecked(True)
+        self._on_file_chosen(Path(path))
 
     def _on_file_chosen(self, path: Path) -> None:
         self._set_status(f"Abriendo {path.name}...")
@@ -247,7 +258,11 @@ class MainWindow(QMainWindow):
 
     def _on_history_selection_changed(self) -> None:
         entry = self._selected_entry()
+
+        # Abrir requiere que el archivo exista; quitar del historial no: es
+        # justamente lo que se quiere hacer con las entradas muertas.
         self.ui.btn_open_export.setEnabled(entry is not None and entry.is_available)
+        self.ui.btn_forget_export.setEnabled(entry is not None)
 
     def _selected_entry(self):
         item = self.ui.list_history.currentItem()
@@ -268,6 +283,22 @@ class MainWindow(QMainWindow):
             self._view_model.open_export(entry.record.output_path)
         except Exception as error:
             self._report_blocking_error(error)
+
+    def _forget_selected_export(self) -> None:
+        """
+        Saca una entrada del historial sin tocar el PDF en disco.
+
+        No pide confirmación: se pierde un registro, no un archivo, y la
+        entrada seleccionada está a la vista. Reservar el diálogo para lo
+        irreversible evita que el usuario aprenda a ignorarlos.
+        """
+        entry = self._selected_entry()
+        if entry is None:
+            return
+
+        self._history_repository.remove(entry.record.id)
+        self._view_model.refresh_history()
+        self._set_status(f"{entry.record.output_filename} salió del historial.")
 
     def _clear_history(self) -> None:
         if self.ui.list_history.count() == 0:
