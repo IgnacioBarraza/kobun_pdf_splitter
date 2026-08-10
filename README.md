@@ -144,6 +144,37 @@ application menu too. Use `--uninstall` to undo it.
 
 ---
 
+## 📦 Building an executable
+
+```bash
+pip install -e .[build]
+python scripts/build_app.py            # single file, easiest to distribute
+python scripts/build_app.py --onedir    # a folder, starts faster
+```
+
+The recipe lives in [`packaging/kobun.spec`](packaging/kobun.spec) and is shared
+by both platforms. **PyInstaller does not cross-compile**: the Linux binary must
+be built on Linux and the Windows `.exe` on Windows (or in CI).
+
+A build that succeeds is not a build that works — a Qt module excluded too
+aggressively only fails at startup. Always launch the result before shipping it.
+
+| | Linux | Windows |
+|---|---|---|
+| Output | `dist/kobun` | `dist/kobun.exe` |
+| Size | ~93 MB (one file) | similar |
+| Icon | resolved by the desktop from the `.desktop` entry | embedded in the `.exe` |
+| Console window | n/a | none (`console=False`) |
+
+On Linux, point the desktop entry at the built binary instead of the
+development environment:
+
+```bash
+python scripts/install_desktop_entry.py --exec dist/kobun
+```
+
+---
+
 ## 🧪 Tests
 
 ```bash

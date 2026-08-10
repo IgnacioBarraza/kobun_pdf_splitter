@@ -30,6 +30,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
+# PyInstaller no es una dependencia de la app: sólo hace falta para generar el
+# ejecutable, y no debe viajar al usuario final.
+build = ["pyinstaller>=6.0"]
 
 # gui-scripts y no scripts: en Windows genera un lanzador sin consola detrás.
 [project.gui-scripts]

@@ -15,13 +15,19 @@ Instala tres cosas en el directorio del usuario, sin permisos de root:
 
 Uso:
     ./.venv/bin/python scripts/install_desktop_entry.py
+    ./.venv/bin/python scripts/install_desktop_entry.py --exec dist/kobun
     ./.venv/bin/python scripts/install_desktop_entry.py --uninstall
+
+Sin `--exec` la entrada apunta al intérprete del entorno y a main.py, que es lo
+que sirve durante el desarrollo. Con `--exec` apunta a un ejecutable ya
+construido, que es lo que corresponde a una app instalada.
 """
 import argparse
 import shutil
 import subprocess
 import sys
 from pathlib import Path
+from typing import Optional
 
 RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ))
@@ -43,7 +49,7 @@ Version=1.0
 Name={nombre}
 GenericName=Divisor de PDFs
 Comment=Extraer rangos de páginas de un PDF a un archivo nuevo
-Exec={ejecutable} {entrada} %f
+Exec={comando}
 Icon={app_id}
 Terminal=false
 Categories=Office;
@@ -53,7 +59,22 @@ StartupNotify=true
 """
 
 
-def instalar() -> None:
+def linea_exec(ejecutable: Optional[Path]) -> str:
+    """
+    Comando que el escritorio va a lanzar.
+
+    `%f` es lo que hace que el archivo elegido en "Abrir con" llegue como
+    argumento; sin él la app abriría vacía.
+    """
+    if ejecutable is not None:
+        return f"{ejecutable.resolve()} %f"
+
+    # sys.executable es el intérprete que corre este script: si se lo invoca
+    # con el del venv, la entrada queda apuntando al correcto.
+    return f"{sys.executable} {RAIZ / 'main.py'} %f"
+
+
+def instalar(ejecutable: Optional[Path] = None) -> None:
     copiados = 0
     for lado in APP_ICON_SIZES:
         origen = app_icon_file(lado)
@@ -70,18 +91,12 @@ def instalar() -> None:
 
     ENTRADAS.mkdir(parents=True, exist_ok=True)
     ENTRADA.write_text(
-        PLANTILLA.format(
-            nombre=APP_NAME,
-            # sys.executable es el intérprete que corre este script: si se lo
-            # invoca con el del venv, la entrada queda apuntando al correcto.
-            ejecutable=sys.executable,
-            entrada=RAIZ / "main.py",
-            app_id=APP_ID,
-        ),
+        PLANTILLA.format(nombre=APP_NAME, comando=linea_exec(ejecutable), app_id=APP_ID),
         encoding="utf-8",
     )
     ENTRADA.chmod(0o755)
     print(f"entrada instalada: {ENTRADA}")
+    print(f"  Exec={linea_exec(ejecutable)}")
 
     refrescar()
 
@@ -122,12 +137,19 @@ def refrescar() -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--uninstall", action="store_true", help="Quitar la integración")
+    parser.add_argument(
+        "--exec", dest="ejecutable", type=Path, default=None,
+        help="Ruta a un ejecutable construido; por defecto apunta al entorno de desarrollo",
+    )
     args = parser.parse_args()
 
     if args.uninstall:
         desinstalar()
     else:
-        instalar()
+        if args.ejecutable is not None and not args.ejecutable.is_file():
+            raise SystemExit(f"No existe el ejecutable: {args.ejecutable}")
+
+        instalar(args.ejecutable)
         print(f"\nListo. Volvé a lanzar la app; el app_id ahora es '{APP_ID}'.")
 
     return 0
