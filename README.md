@@ -105,15 +105,28 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+That installs the project in editable mode with its development extras.
+`requirements.txt` only points at `pyproject.toml`, which is the single source
+of truth for dependencies.
+
+Once installed, the `kobun` command is available:
+
+```bash
+kobun                    # opens the window
+kobun path/to/book.pdf   # opens it with that document loaded
+```
+
 ---
 
 ## 🚀 Running the Application
 
 ```bash
-./.venv/bin/python main.py
+kobun                    # if the project is installed
+./.venv/bin/python main.py   # straight from the source tree
 ```
 
-Or, with the environment activated, `python main.py`.
+Both accept a PDF as an argument, which is also how the desktop passes the file
+when Kobun is chosen from "Open with".
 
 ### Desktop integration on Linux (optional)
 
@@ -134,7 +147,7 @@ application menu too. Use `--uninstall` to undo it.
 ## 🧪 Tests
 
 ```bash
-pytest kobun/tests            # everything
+pytest                        # everything (testpaths is configured)
 pytest kobun/tests/unit       # pure domain, no dependencies
 ```
 
@@ -193,6 +206,7 @@ record_use_case.execute(response)                        # add it to the history
 - [ ] Page preview before splitting
 - [ ] Batch splitting
 - [ ] CLI version
+- [x] Installable package with a `kobun` entry point
 - [ ] Cross-platform packaging (Windows / macOS / Linux)
 - [ ] Installer distribution
 

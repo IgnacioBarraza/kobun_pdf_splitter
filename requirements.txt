@@ -1,6 +1,5 @@
-# Runtime
-PySide6>=6.6,<7
-pymupdf>=1.24,<2
-
-# Desarrollo
-pytest>=8.0
+# Las dependencias reales se declaran en pyproject.toml, que es la única
+# fuente de verdad. Este archivo existe para que el comando del README siga
+# funcionando e instala el proyecto en modo editable con sus extras de
+# desarrollo.
+-e .[dev]

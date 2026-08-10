@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kobun"
+dynamic = ["version"]
+description = "Utilidad de escritorio para dividir PDFs por rangos de páginas"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "Ignacio Barraza" }]
+keywords = ["pdf", "split", "desktop", "qt", "pyside6"]
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: X11 Applications :: Qt",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Office/Business",
+    "Topic :: Utilities",
+]
+
+dependencies = [
+    "PySide6>=6.6,<7",
+    "pymupdf>=1.24,<2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+# gui-scripts y no scripts: en Windows genera un lanzador sin consola detrás.
+[project.gui-scripts]
+kobun = "kobun.presentation.qt.qt_app:run"
+
+[project.urls]
+Repository = "https://github.com/IgnacioBarraza/kobun_pdf_splitter"
+
+[tool.setuptools.dynamic]
+# Una sola fuente de verdad para la versión: el paquete.
+version = { attr = "kobun.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["kobun*"]
+exclude = ["kobun.tests*"]
+
+# Los temas, los iconos y las flechas del selector no son .py, así que sin
+# declararlos quedan fuera de cualquier distribución y la app se instalaría
+# sin colores ni icono.
+[tool.setuptools.package-data]
+"kobun.shared" = [
+    "themes/*.json",
+    "themes/icons/*.svg",
+    "icons/*.png",
+    "icons/*.ico",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["kobun/tests"]
