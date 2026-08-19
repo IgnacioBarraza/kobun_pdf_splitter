@@ -9,6 +9,7 @@ Se construye con:
 PyInstaller **no compila cruzado**: este archivo sirve en los dos sistemas,
 pero cada binario hay que generarlo en el sistema al que apunta.
 """
+import os
 import sys
 from pathlib import Path
 
@@ -16,6 +17,11 @@ from PyInstaller.utils.hooks import collect_data_files
 
 RAIZ = Path(SPECPATH).parent  # noqa: F821 — SPECPATH lo inyecta PyInstaller
 ES_WINDOWS = sys.platform.startswith("win")
+
+# El flag --onedir de la línea de comandos no llega a un archivo .spec: el modo
+# lo decide la receta según tenga o no un paso COLLECT. Se lee del entorno para
+# que scripts/build_app.py pueda elegirlo.
+UN_SOLO_ARCHIVO = os.environ.get("KOBUN_ONEFILE", "1") != "0"
 
 # Los temas, los iconos y las flechas del selector no son .py, así que sin
 # recolectarlos el ejecutable arranca sin colores. Y como ThemeService deja
@@ -83,11 +89,7 @@ analysis = Analysis(  # noqa: F821
 
 pyz = PYZ(analysis.pure)  # noqa: F821
 
-exe = EXE(  # noqa: F821
-    pyz,
-    analysis.scripts,
-    analysis.binaries,
-    analysis.datas,
+COMUNES = dict(
     name="kobun",
     debug=False,
     strip=False,
@@ -99,3 +101,13 @@ exe = EXE(  # noqa: F821
     # escritorio a partir del .desktop.
     icon=str(RAIZ / "kobun" / "shared" / "icons" / "kobun.ico") if ES_WINDOWS else None,
 )
+
+if UN_SOLO_ARCHIVO:
+    exe = EXE(pyz, analysis.scripts, analysis.binaries, analysis.datas, **COMUNES)  # noqa: F821
+else:
+    # En modo directorio el ejecutable queda liviano y las dependencias van
+    # afuera: arranca más rápido porque no descomprime nada en cada ejecución.
+    exe = EXE(pyz, analysis.scripts, exclude_binaries=True, **COMUNES)  # noqa: F821
+    coleccion = COLLECT(  # noqa: F821
+        exe, analysis.binaries, analysis.datas, strip=False, upx=False, name="kobun",
+    )

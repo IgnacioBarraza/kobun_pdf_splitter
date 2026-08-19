@@ -163,8 +163,13 @@ aggressively only fails at startup. Always launch the result before shipping it.
 |---|---|---|
 | Output | `dist/kobun` | `dist/kobun.exe` |
 | Size | ~93 MB (one file) | similar |
+| Installer | `.deb` (see below) | Inno Setup (see below) |
 | Icon | resolved by the desktop from the `.desktop` entry | embedded in the `.exe` |
 | Console window | n/a | none (`console=False`) |
+
+Released files are named `kobun`, `kobun.exe` and `kobun_<version>_amd64.deb`.
+The version is not in the first two names because the app shows it in its own
+sidebar; the `.deb` keeps the Debian convention because tooling expects it.
 
 On Linux, point the desktop entry at the built binary instead of the
 development environment:
@@ -172,6 +177,23 @@ development environment:
 ```bash
 python scripts/install_desktop_entry.py --exec dist/kobun
 ```
+
+### Linux package
+
+A bare executable is not a usable distribution format on Linux: modern file
+managers refuse to launch binaries on double-click, and downloading one loses
+its executable bit. The `.deb` is the Linux counterpart of the Windows
+installer — it puts the binary in `/usr/bin`, registers the `.desktop` entry and
+the icons, and shows up in the application menu.
+
+```bash
+python scripts/build_app.py
+python scripts/build_deb.py
+sudo apt install ./dist/kobun_*_amd64.deb
+```
+
+Its dependencies were not guessed: they come from walking the `NEEDED` entries
+of every library in the Qt bundle and mapping what is missing to packages.
 
 ### Getting the Windows `.exe` without a Windows machine
 

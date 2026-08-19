@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+import kobun
 from kobun.presentation.qt.windows.drag_drop_area import DragDropArea
 from kobun.presentation.qt.windows.split_options_widget import SplitOptionsWidget
 
@@ -90,6 +91,13 @@ class Ui_MainWindow:
 
         self.combo_theme = QComboBox()
         pie.addWidget(self.combo_theme)
+
+        # La versión sale del paquete, no de una constante propia: así el
+        # nombre del archivo descargado puede quedar limpio y saber qué versión
+        # se está usando sigue siendo posible desde la app.
+        self.label_version = QLabel(f"v{kobun.__version__}")
+        self.label_version.setObjectName("SecondaryText")
+        pie.addWidget(self.label_version)
 
         layout.addLayout(pie)
 

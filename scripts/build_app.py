@@ -14,6 +14,7 @@ Requiere el extra de construcción:
     pip install -e .[build]
 """
 import argparse
+import os
 import shutil
 import subprocess
 import sys
@@ -64,14 +65,13 @@ def construir(onedir: bool, limpiar: bool) -> Path:
         "--log-level", "WARN",
     ]
 
-    if onedir:
-        # onedir arranca más rápido porque no extrae nada en cada ejecución;
-        # onefile es un solo archivo y se distribuye mucho más fácil.
-        comando.append("--onedir")
+    # El flag --onedir no llega a un archivo .spec: la receta lee el modo del
+    # entorno. Pasarlo como flag no hacía nada.
+    entorno = dict(os.environ, KOBUN_ONEFILE="0" if onedir else "1")
 
-    print(f"\nConstruyendo para {sys.platform}...")
+    print(f"\nConstruyendo para {sys.platform} ({'directorio' if onedir else 'un solo archivo'})...")
     inicio = time.monotonic()
-    resultado = subprocess.run(comando, cwd=RAIZ)
+    resultado = subprocess.run(comando, cwd=RAIZ, env=entorno)
     duracion = time.monotonic() - inicio
 
     if resultado.returncode != 0:

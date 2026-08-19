@@ -697,3 +697,21 @@ def test_forgetting_survives_a_reload(window, qt_app, source_pdf):
     settle(qt_app)
 
     assert window.ui.list_history.count() == 0
+
+
+# =========================
+# Versión visible
+# =========================
+
+def test_the_window_shows_the_package_version(window):
+    """
+    Con la versión a la vista, el archivo descargado puede llamarse sólo
+    "kobun" sin perder la forma de saber qué versión se está usando.
+    """
+    import kobun
+
+    assert window.ui.label_version.text() == f"v{kobun.__version__}"
+
+
+def test_the_version_label_is_not_empty(window):
+    assert window.ui.label_version.text().strip() not in ("", "v")

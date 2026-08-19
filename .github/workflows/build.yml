@@ -90,6 +90,13 @@ jobs:
       - name: Construir
         run: python scripts/build_app.py
 
+      - name: Empaquetar .deb
+        # Un binario suelto no alcanza en Linux: los exploradores ya no lanzan
+        # ejecutables con doble clic, así que hace falta instalarlo con su
+        # entrada .desktop para que aparezca en el menú de aplicaciones.
+        if: runner.os == 'Linux'
+        run: python scripts/build_deb.py
+
       - name: Comprobar que la salida existe y tiene tamaño razonable
         shell: python
         run: |
@@ -107,10 +114,21 @@ jobs:
           if mb < 40:
               sys.exit(f"Sospechosamente chico ({mb:.0f} MB): faltan dependencias")
 
+      # El nombre lleva la plataforma porque los artifacts de una misma corrida
+      # deben ser únicos; los archivos que se publican en la release sí van con
+      # nombre limpio.
       - uses: actions/upload-artifact@v4
         with:
           name: kobun-${{ matrix.nombre }}
           path: dist/${{ matrix.artefacto }}
+          retention-days: 30
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Linux'
+        with:
+          name: kobun-deb
+          path: dist/*.deb
           retention-days: 30
           if-no-files-found: error
 
@@ -126,12 +144,16 @@ jobs:
         with:
           path: artefactos
 
-      - name: Renombrar con la versión del tag
+      - name: Reunir los archivos a publicar
+        # Nombres limpios: la extensión ya distingue el sistema y la versión se
+        # ve dentro de la app, así que no hace falta repetirla en el archivo.
+        # El .deb es la excepción: conserva la convención de Debian porque las
+        # herramientas del ecosistema la esperan.
         run: |
           mkdir -p publicar
-          VERSION="${GITHUB_REF_NAME}"
-          cp artefactos/kobun-linux/kobun     "publicar/kobun-${VERSION}-linux-x86_64"
-          cp artefactos/kobun-windows/kobun.exe "publicar/kobun-${VERSION}-windows-x86_64.exe"
+          cp artefactos/kobun-linux/kobun       publicar/kobun
+          cp artefactos/kobun-windows/kobun.exe publicar/kobun.exe
+          cp artefactos/kobun-deb/*.deb         publicar/
           ls -la publicar/
 
       - name: Crear la release
@@ -142,10 +164,22 @@ jobs:
             --repo "${GITHUB_REPOSITORY}" \
             --title "Kobun ${GITHUB_REF_NAME}" \
             --notes-file - <<'NOTAS'
-          Ejecutables portables: se descargan y se abren, no se instalan.
+          ### Windows
 
-          **Windows**: al no estar firmado, SmartScreen va a advertir la primera
-          vez. Hay que elegir "Más información" y luego "Ejecutar de todas formas".
+          `kobun.exe` es portable: se descarga y se abre, no se instala.
 
-          **Linux**: dar permiso de ejecución con `chmod +x` antes de abrirlo.
+          ### Linux
+
+          **Recomendado**: el `.deb`, que instala la app en el menú de
+          aplicaciones con su icono.
+
+          ```
+          sudo apt install ./kobun_*_amd64.deb
+          ```
+
+          El binario suelto `kobun` sirve para otras distribuciones, pero tené
+          en cuenta dos cosas: hay que darle permiso con `chmod +x` (el ZIP de
+          descarga no lo preserva) y **los exploradores de archivos modernos no
+          lanzan binarios con doble clic**, así que hay que ejecutarlo desde una
+          terminal.
           NOTAS
