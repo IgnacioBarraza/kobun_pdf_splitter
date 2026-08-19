@@ -27,7 +27,7 @@ import kobun  # noqa: E402
 from kobun.shared.config.app_settings import APP_ICON_SIZES, APP_ID, APP_NAME, app_icon_file  # noqa: E402
 
 ARQUITECTURA = "amd64"
-MANTENEDOR = "Ignacio Barraza <ignacio@mapvx.com>"
+MANTENEDOR = "Ignacio Barraza <ignacio.barraza.rioja@gmail.com>"
 
 # Medidas, no adivinadas: son las librerías que las .so del bundle de Qt
 # necesitan y que el propio bundle no trae. Se obtienen recorriendo los NEEDED

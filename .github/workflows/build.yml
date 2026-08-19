@@ -3,10 +3,14 @@ name: build
 # Los binarios se generan en el sistema al que apuntan: PyInstaller no compila
 # cruzado, así que el .exe de Windows sale del runner de Windows y no hay forma
 # de producirlo desde Linux.
+#
+# La versión no se decide acá: la deciden los commits. Un push a develop publica
+# una prerelease (0.2.0-alpha.N) y un push a main la versión definitiva, según
+# lo que digan los prefijos conventional (`feat:`, `fix:`, …). La configuración
+# vive en pyproject.toml, en [tool.semantic_release].
 on:
   push:
     branches: [main, develop]
-    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
@@ -51,8 +55,12 @@ jobs:
           /tmp/pelado/bin/pip install -q pytest
           /tmp/pelado/bin/python -m pytest kobun/tests/unit -q
 
+  # Construcción de verificación. Sólo corre donde no hay release: en un push a
+  # main o develop los binarios los construye "publicar", después de que la
+  # versión ya está subida, para no construirlos dos veces.
   build:
-    name: ${{ matrix.nombre }}
+    name: build ${{ matrix.nombre }}
+    if: github.event_name != 'push'
     needs: test
     runs-on: ${{ matrix.os }}
     strategy:
@@ -91,9 +99,6 @@ jobs:
         run: python scripts/build_app.py
 
       - name: Empaquetar .deb
-        # Un binario suelto no alcanza en Linux: los exploradores ya no lanzan
-        # ejecutables con doble clic, así que hace falta instalarlo con su
-        # entrada .desktop para que aparezca en el menú de aplicaciones.
         if: runner.os == 'Linux'
         run: python scripts/build_deb.py
 
@@ -114,9 +119,6 @@ jobs:
           if mb < 40:
               sys.exit(f"Sospechosamente chico ({mb:.0f} MB): faltan dependencias")
 
-      # El nombre lleva la plataforma porque los artifacts de una misma corrida
-      # deben ser únicos; los archivos que se publican en la release sí van con
-      # nombre limpio.
       - uses: actions/upload-artifact@v4
         with:
           name: kobun-${{ matrix.nombre }}
@@ -124,62 +126,164 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
-      - uses: actions/upload-artifact@v4
-        if: runner.os == 'Linux'
-        with:
-          name: kobun-deb
-          path: dist/*.deb
-          retention-days: 30
-          if-no-files-found: error
+  # =========================
+  # Versionado
+  # =========================
 
-  release:
-    name: publicar
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
+  version:
+    name: versionar
+    if: github.event_name == 'push'
+    needs: test
     runs-on: ubuntu-latest
+    # Una release por vez, y sólo acá: dos pushes seguidos correrían dos
+    # versionados en paralelo y el segundo intentaría empujar sobre una rama que
+    # ya se movió. A nivel de workflow esto además serializaría los PRs, que no
+    # tienen por qué esperarse entre ellos.
+    concurrency:
+      group: release
+      cancel-in-progress: false
+    permissions:
+      # Empuja el commit de versión, el tag, y crea la release.
+      contents: write
+    outputs:
+      publicada: ${{ steps.psr.outputs.released }}
+      version: ${{ steps.psr.outputs.version }}
+      tag: ${{ steps.psr.outputs.tag }}
+    steps:
+      # La historia completa, con tags: sin ella no se puede saber qué cambió
+      # desde la última versión ni cuál era.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Instalar semantic-release
+        run: pip install -e .[release]
+
+      - name: Versionar, escribir el changelog y taguear
+        # Decide la versión a partir de los commits: `feat:` sube el minor,
+        # `fix:`/`perf:` el patch, el resto no publica nada. Si no hay nada que
+        # ameritar, no hace nada y deja released=false.
+        #
+        # Cuando sí publica: sube __version__ en kobun/__init__.py, actualiza
+        # docs/changelog.md, commitea, taguea, empuja y crea la release. La
+        # marca de prerelease la pone solo, según si la versión tiene sufijo.
+        id: psr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: semantic-release -v version
+
+      - name: Escribir las notas de la release
+        # semantic-release ya dejó unas notas, pero se reemplazan: éstas llevan
+        # las instrucciones de instalación y, en una versión definitiva, todos
+        # los cambios desde la última definitiva —no sólo los del último alpha,
+        # que es lo único que quedaría si se contara tag a tag.
+        if: steps.psr.outputs.released == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 scripts/release_notes.py "${{ steps.psr.outputs.tag }}" --salida notas.md
+          gh release edit "${{ steps.psr.outputs.tag }}" --notes-file notas.md
+
+      - name: Resumen
+        # Sin `always()`: si el versionado falló, "nada que publicar" sería una
+        # explicación falsa de lo que pasó.
+        run: |
+          if [ "${{ steps.psr.outputs.released }}" = "true" ]; then
+            {
+              echo "### ${{ steps.psr.outputs.tag }}"
+              echo "Anterior: ${{ steps.psr.outputs.previous_version }}"
+              echo ""
+              cat notas.md
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Nada que publicar: ningún commit de este push amerita una versión nueva." \
+              >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  # =========================
+  # Binarios de la release
+  # =========================
+
+  publicar:
+    name: publicar ${{ matrix.nombre }}
+    needs: version
+    if: needs.version.outputs.publicada == 'true'
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            nombre: linux
+            artefacto: kobun
+            # Nombres limpios: la extensión ya distingue el sistema y la versión
+            # se ve dentro de la app. El .deb es la excepción, porque las
+            # herramientas de Debian esperan su convención.
+            adjuntos: dist/kobun dist/*.deb
+          - os: windows-latest
+            nombre: windows
+            artefacto: kobun.exe
+            adjuntos: dist/kobun.exe
+
     steps:
-      - uses: actions/download-artifact@v4
+      # El tag, no la rama: la rama ya tiene el commit de versión, pero apuntar
+      # al tag deja explícito que lo que se publica es exactamente eso.
+      - uses: actions/checkout@v4
         with:
-          path: artefactos
+          ref: ${{ needs.version.outputs.tag }}
 
-      - name: Reunir los archivos a publicar
-        # Nombres limpios: la extensión ya distingue el sistema y la versión se
-        # ve dentro de la app, así que no hace falta repetirla en el archivo.
-        # El .deb es la excepción: conserva la convención de Debian porque las
-        # herramientas del ecosistema la esperan.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Dependencias de sistema para Qt
+        if: runner.os == 'Linux'
         run: |
-          mkdir -p publicar
-          cp artefactos/kobun-linux/kobun       publicar/kobun
-          cp artefactos/kobun-windows/kobun.exe publicar/kobun.exe
-          cp artefactos/kobun-deb/*.deb         publicar/
-          ls -la publicar/
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libegl1 libgl1 libxkbcommon-x11-0 libdbus-1-3
 
-      - name: Crear la release
+      - name: Instalar el proyecto
+        run: pip install -e .[build]
+
+      - name: Construir
+        run: python scripts/build_app.py
+
+      - name: Empaquetar .deb
+        # Un binario suelto no alcanza en Linux: los exploradores ya no lanzan
+        # ejecutables con doble clic, así que hace falta instalarlo con su
+        # entrada .desktop para que aparezca en el menú de aplicaciones.
+        if: runner.os == 'Linux'
+        run: python scripts/build_deb.py
+
+      - name: Comprobar que la salida existe y tiene tamaño razonable
+        shell: python
+        run: |
+          import sys
+          from pathlib import Path
+
+          binario = Path("dist") / "${{ matrix.artefacto }}"
+          if not binario.is_file():
+              sys.exit(f"No se generó {binario}")
+
+          mb = binario.stat().st_size / 1024 / 1024
+          print(f"{binario}: {mb:.0f} MB")
+
+          if mb < 40:
+              sys.exit(f"Sospechosamente chico ({mb:.0f} MB): faltan dependencias")
+
+      - name: Adjuntar a la release
+        # --clobber para que reintentar el job reemplace el archivo en vez de
+        # fallar porque ya existe.
+        shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release create "${GITHUB_REF_NAME}" publicar/* \
-            --repo "${GITHUB_REPOSITORY}" \
-            --title "Kobun ${GITHUB_REF_NAME}" \
-            --notes-file - <<'NOTAS'
-          ### Windows
-
-          `kobun.exe` es portable: se descarga y se abre, no se instala.
-
-          ### Linux
-
-          **Recomendado**: el `.deb`, que instala la app en el menú de
-          aplicaciones con su icono.
-
-          ```
-          sudo apt install ./kobun_*_amd64.deb
-          ```
-
-          El binario suelto `kobun` sirve para otras distribuciones, pero tené
-          en cuenta dos cosas: hay que darle permiso con `chmod +x` (el ZIP de
-          descarga no lo preserva) y **los exploradores de archivos modernos no
-          lanzan binarios con doble clic**, así que hay que ejecutarlo desde una
-          terminal.
-          NOTAS
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ needs.version.outputs.tag }}" ${{ matrix.adjuntos }} --clobber

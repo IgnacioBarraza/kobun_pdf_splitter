@@ -33,6 +33,8 @@ dev = ["pytest>=8.0"]
 # PyInstaller no es una dependencia de la app: sólo hace falta para generar el
 # ejecutable, y no debe viajar al usuario final.
 build = ["pyinstaller>=6.0"]
+# Sólo lo usa el CI para versionar y publicar.
+release = ["python-semantic-release>=10,<11"]
 
 # gui-scripts y no scripts: en Windows genera un lanzador sin consola detrás.
 [project.gui-scripts]
@@ -62,3 +64,57 @@ exclude = ["kobun.tests*"]
 
 [tool.pytest.ini_options]
 testpaths = ["kobun/tests"]
+
+# =============================================================================
+# Versionado automático
+# =============================================================================
+# La versión no se sube a mano: sale de los commits. `feat:` levanta el minor,
+# `fix:`/`perf:` el patch, y el resto no publica nada. Es el esquema de
+# semantic-release; se usa la implementación en Python para no arrastrar Node a
+# un proyecto que no lo necesita.
+[tool.semantic_release]
+# El mismo archivo que lee setuptools: una sola fuente de verdad para la
+# versión, que además es la que la app muestra en su barra lateral.
+version_variables = ["kobun/__init__.py:__version__"]
+tag_format = "v{version}"
+
+# 0.x es una versión válida: sin esto la primera publicación automática saltaría
+# directo a 1.0.0.
+allow_zero_version = true
+# Antes de 1.0.0 un cambio que rompe compatibilidad no justifica un major: la
+# API todavía no prometió estabilidad.
+major_on_zero = false
+
+# Los binarios los construye el workflow en cada sistema; semantic-release sólo
+# versiona, así que no tiene nada que construir acá.
+build_command = ""
+
+# El mensaje es conventional a propósito: si más adelante se valida el formato
+# de los commits, el que escribe la propia release no puede ser el que falle.
+commit_message = "chore(release): v{version} [skip ci]"
+commit_author = "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
+
+# main publica versiones definitivas; develop publica prereleases numeradas
+# (0.2.0-alpha.1, .2, …) para poder probar los binarios antes de que salgan.
+[tool.semantic_release.branches.main]
+match = "main"
+prerelease = false
+
+[tool.semantic_release.branches.develop]
+match = "develop"
+prerelease = true
+prerelease_token = "alpha"
+
+[tool.semantic_release.changelog]
+# "update" inserta la versión nueva y deja intacto lo ya escrito.
+mode = "update"
+# Los commits de la propia release no son cambios del proyecto.
+exclude_commit_patterns = ['^chore\(release\):']
+
+[tool.semantic_release.changelog.default_templates]
+changelog_file = "docs/changelog.md"
+
+# Los archivos que se adjuntan a la release los sube el workflow con `gh`,
+# porque se construyen en runners distintos y en un paso posterior.
+[tool.semantic_release.publish]
+upload_to_vcs_release = false
