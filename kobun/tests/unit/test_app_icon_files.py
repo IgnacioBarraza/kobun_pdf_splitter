@@ -105,3 +105,35 @@ def test_the_app_id_is_a_valid_desktop_file_name():
     assert " " not in APP_ID
     assert APP_ID.isascii()
     assert not APP_ID.endswith(".desktop"), "Qt agrega la extensión por su cuenta"
+
+
+def test_the_windows_installer_version_matches_the_package():
+    """
+    El instalador declara su versión en su propio archivo. Sin este control,
+    publicar un setup etiquetado con una versión vieja no lo nota nadie hasta
+    que un usuario lo instala.
+    """
+    import re
+    from pathlib import Path
+
+    import kobun
+
+    iss = Path(__file__).resolve().parents[3] / "packaging" / "kobun.iss"
+    if not iss.is_file():
+        import pytest as _pytest
+        _pytest.skip("no hay receta de instalador")
+
+    declarada = re.search(r'#define MiVersion "([^"]+)"', iss.read_text(encoding="utf-8"))
+
+    assert declarada is not None, "el .iss debe declarar MiVersion"
+    assert declarada.group(1) == kobun.__version__
+
+
+def test_the_windows_installer_points_at_the_bundled_icon():
+    """El .ico tiene que existir en el repo: el instalador lo usa como su icono."""
+    from pathlib import Path
+
+    import kobun
+
+    raiz = Path(kobun.__file__).resolve().parent.parent
+    assert (raiz / "kobun" / "shared" / "icons" / "kobun.ico").is_file()

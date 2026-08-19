@@ -173,6 +173,32 @@ development environment:
 python scripts/install_desktop_entry.py --exec dist/kobun
 ```
 
+### Getting the Windows `.exe` without a Windows machine
+
+[`.github/workflows/build.yml`](.github/workflows/build.yml) runs the test suite,
+then builds both binaries on their own runners and uploads them as artifacts.
+Pushing a `v*` tag also publishes them as a GitHub release.
+
+### Windows installer
+
+The `.exe` is **portable**: it runs on double-click, with no installation. What
+it does not give you is a Start menu shortcut, a PDF association or an entry in
+Add/Remove Programs. That is what [`packaging/kobun.iss`](packaging/kobun.iss)
+adds, via Inno Setup:
+
+```bat
+python scripts\build_app.py
+iscc packaging\kobun.iss
+```
+
+It installs per-user, so no UAC prompt, and it registers Kobun as an *option*
+for PDFs rather than stealing the default association from whatever viewer is
+already installed.
+
+Note that an unsigned executable downloaded from the internet triggers a
+SmartScreen warning on first run. Removing it requires a code-signing
+certificate.
+
 ---
 
 ## 🧪 Tests
