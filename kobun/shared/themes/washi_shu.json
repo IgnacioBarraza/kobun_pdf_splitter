@@ -1,0 +1,22 @@
+{
+    "name": "washi_shu",
+    "label": "Washi · rojo",
+    "colors": {
+        "background": "#ece0c8",
+        "surface": "#f7efdd",
+        "surface_alt": "#ddcda8",
+        "primary": "#b83218",
+        "primary_hover": "#9a2711",
+        "border": "#d3c09a",
+        "border_strong": "#b8a075",
+        "danger": "#9e2b1e",
+        "success": "#546b3c",
+        "muted": "#94815f",
+        "text": {
+            "primary": "#2a2118",
+            "secondary": "#6d5c44",
+            "inverse": "#fbf5e8",
+            "disabled": "#a89372"
+        }
+    }
+}

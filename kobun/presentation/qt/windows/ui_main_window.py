@@ -1,0 +1,211 @@
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
+    QComboBox,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QListWidget,
+    QProgressBar,
+    QPushButton,
+    QStackedWidget,
+    QVBoxLayout,
+    QWidget,
+)
+
+from kobun.presentation.qt.windows.drag_drop_area import DragDropArea
+from kobun.presentation.qt.windows.split_options_widget import SplitOptionsWidget
+
+SPLIT_PAGE = 0
+HISTORY_PAGE = 1
+
+
+class Ui_MainWindow:
+    """
+    Construcción de la interfaz, sin ninguna lógica.
+
+    Los widgets no llevan estilos propios: todo el color sale del QSS que
+    genera StyleGenerator, para que alternar tema sea reemplazar una hoja.
+    """
+
+    def setupUi(self, MainWindow) -> None:
+        MainWindow.setObjectName("MainWindow")
+        MainWindow.setWindowTitle("Kobun")
+        MainWindow.resize(1000, 680)
+
+        self.central_widget = QWidget(MainWindow)
+        root = QHBoxLayout(self.central_widget)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+
+        root.addWidget(self._build_sidebar())
+        root.addWidget(self._build_content(), stretch=1)
+
+        MainWindow.setCentralWidget(self.central_widget)
+
+    # =========================
+    # Sidebar
+    # =========================
+
+    def _build_sidebar(self) -> QFrame:
+        self.sidebar = QFrame()
+        self.sidebar.setObjectName("Sidebar")
+        self.sidebar.setFixedWidth(224)
+
+        layout = QVBoxLayout(self.sidebar)
+        # Sin margen horizontal: la barra de acento de la navegación tiene que
+        # tocar el borde del panel, como en un rail.
+        layout.setContentsMargins(0, 26, 0, 22)
+        layout.setSpacing(0)
+
+        cabecera = QVBoxLayout()
+        cabecera.setContentsMargins(18, 0, 18, 0)
+        cabecera.setSpacing(2)
+
+        self.label_logo = QLabel("KOBUN")
+        self.label_logo.setObjectName("Logo")
+        cabecera.addWidget(self.label_logo)
+
+        self.label_tagline = QLabel("Dividir PDFs")
+        self.label_tagline.setObjectName("SecondaryText")
+        cabecera.addWidget(self.label_tagline)
+
+        layout.addLayout(cabecera)
+        layout.addSpacing(28)
+
+        self.btn_split = self._nav_button("Dividir PDF", checked=True)
+        layout.addWidget(self.btn_split)
+
+        self.btn_history = self._nav_button("Historial")
+        layout.addWidget(self.btn_history)
+
+        layout.addStretch()
+
+        pie = QVBoxLayout()
+        pie.setContentsMargins(18, 0, 18, 0)
+        pie.setSpacing(6)
+
+        self.label_theme = QLabel("TEMA")
+        self.label_theme.setObjectName("SectionLabel")
+        pie.addWidget(self.label_theme)
+
+        self.combo_theme = QComboBox()
+        pie.addWidget(self.combo_theme)
+
+        layout.addLayout(pie)
+
+        return self.sidebar
+
+    @staticmethod
+    def _hairline() -> QFrame:
+        """Línea de un píxel: separa secciones sin encerrarlas en un marco."""
+        linea = QFrame()
+        linea.setObjectName("Hairline")
+        linea.setFixedHeight(1)
+
+        return linea
+
+    @staticmethod
+    def _nav_button(text: str, checked: bool = False) -> QPushButton:
+        button = QPushButton(text)
+        button.setObjectName("NavButton")
+        button.setCheckable(True)
+        button.setChecked(checked)
+        button.setAutoExclusive(True)
+
+        return button
+
+    # =========================
+    # Contenido
+    # =========================
+
+    def _build_content(self) -> QFrame:
+        self.content_area = QFrame()
+        self.content_area.setObjectName("MainContainer")
+
+        layout = QVBoxLayout(self.content_area)
+        layout.setContentsMargins(38, 30, 38, 26)
+        layout.setSpacing(18)
+
+        self.pages = QStackedWidget()
+        self.pages.addWidget(self._build_split_page())
+        self.pages.addWidget(self._build_history_page())
+        layout.addWidget(self.pages, stretch=1)
+
+        self.progress = QProgressBar()
+        self.progress.setRange(0, 0)  # Indeterminado: no sabemos cuánto falta.
+        self.progress.setTextVisible(False)
+        self.progress.setVisible(False)
+        layout.addWidget(self.progress)
+
+        self.label_status = QLabel("")
+        self.label_status.setWordWrap(True)
+        layout.addWidget(self.label_status)
+
+        return self.content_area
+
+    def _build_split_page(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(20)
+
+        self.title_split = QLabel("Dividir documento")
+        self.title_split.setObjectName("Title")
+        layout.addWidget(self.title_split)
+
+        self.drop_area = DragDropArea()
+        layout.addWidget(self.drop_area)
+
+        layout.addWidget(self._hairline())
+
+        self.split_options = SplitOptionsWidget()
+        layout.addWidget(self.split_options)
+
+        layout.addStretch()
+
+        self.btn_process = QPushButton("DIVIDIR PDF")
+        self.btn_process.setObjectName("PrimaryButton")
+        self.btn_process.setMinimumHeight(44)
+        self.btn_process.setEnabled(False)
+        layout.addWidget(self.btn_process)
+
+        return page
+
+    def _build_history_page(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(12)
+
+        self.title_history = QLabel("Historial de exportaciones")
+        self.title_history.setObjectName("Title")
+        layout.addWidget(self.title_history)
+
+        self.label_history_hint = QLabel(
+            "Doble clic para abrir. Las entradas marcadas con ✗ ya no están en disco."
+        )
+        self.label_history_hint.setObjectName("SecondaryText")
+        layout.addWidget(self.label_history_hint)
+
+        self.list_history = QListWidget()
+        self.list_history.setAlternatingRowColors(False)
+        layout.addWidget(self.list_history, stretch=1)
+
+        actions = QHBoxLayout()
+        actions.setSpacing(8)
+        actions.addStretch()
+
+        self.btn_open_export = QPushButton("Abrir seleccionado")
+        self.btn_open_export.setEnabled(False)
+        actions.addWidget(self.btn_open_export)
+
+        self.btn_forget_export = QPushButton("Quitar de la lista")
+        self.btn_forget_export.setEnabled(False)
+        actions.addWidget(self.btn_forget_export)
+
+        self.btn_clear_history = QPushButton("Limpiar historial")
+        actions.addWidget(self.btn_clear_history)
+
+        layout.addLayout(actions)
+
+        return page

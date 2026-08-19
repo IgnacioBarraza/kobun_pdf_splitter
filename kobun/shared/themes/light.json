@@ -1,0 +1,22 @@
+{
+    "name": "light",
+    "label": "Claro",
+    "colors": {
+        "background": "#faf7f5",
+        "surface": "#ffffff",
+        "surface_alt": "#f2ede9",
+        "primary": "#bb4f44",
+        "primary_hover": "#a34137",
+        "border": "#e2d9d3",
+        "border_strong": "#c9bcb3",
+        "danger": "#b3261e",
+        "success": "#3f7d58",
+        "muted": "#9a8f88",
+        "text": {
+            "primary": "#2b2320",
+            "secondary": "#6f635c",
+            "inverse": "#ffffff",
+            "disabled": "#b0a49d"
+        }
+    }
+}

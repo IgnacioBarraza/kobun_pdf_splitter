@@ -1,0 +1,22 @@
+{
+    "name": "take",
+    "label": "Take · bambú",
+    "colors": {
+        "background": "#0d1c0a",
+        "surface": "#172614",
+        "surface_alt": "#22331e",
+        "primary": "#8fbf6a",
+        "primary_hover": "#a6d182",
+        "border": "#243521",
+        "border_strong": "#3b5136",
+        "danger": "#e8837a",
+        "success": "#7fc2a1",
+        "muted": "#78856f",
+        "text": {
+            "primary": "#e8f0e2",
+            "secondary": "#a9b8a0",
+            "inverse": "#0d1c0a",
+            "disabled": "#5f6d58"
+        }
+    }
+}

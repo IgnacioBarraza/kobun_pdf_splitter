@@ -1,0 +1,206 @@
+from pathlib import Path
+from typing import List, Optional, Set
+
+from PySide6.QtCore import QObject, QThreadPool, Signal
+
+from kobun.application.dto.split_pdf_request import SplitPdfRequest
+from kobun.application.interfaces.file_storage import FileStorage
+from kobun.application.use_cases.list_history_use_case import ListHistoryUseCase
+from kobun.application.use_cases.load_pdf_use_case import LoadPdfUseCase
+from kobun.application.use_cases.record_split_use_case import RecordSplitUseCase
+from kobun.application.use_cases.split_pdf_use_case import SplitPdfUseCase
+from kobun.domain.pdf.entities.pdf_document import PdfDocument
+from kobun.domain.pdf.value_objects.overwrite_policy import OverwritePolicy
+from kobun.domain.pdf.value_objects.page_selection import PageSelection
+from kobun.presentation.qt.workers import Worker
+
+
+class PdfViewModel(QObject):
+    """
+    Estado de la pantalla y puente hacia los use cases.
+
+    La ventana no conoce ningún use case: conecta señales de este objeto y
+    llama a sus métodos. Eso deja la lógica de la pantalla testeable sin
+    instanciar widgets.
+    """
+
+    document_loaded = Signal(object)
+    load_failed = Signal(object)
+
+    split_started = Signal()
+    split_succeeded = Signal(object)
+    split_failed = Signal(object)
+
+    history_changed = Signal(list)
+    history_failed = Signal(object)
+
+    busy_changed = Signal(bool)
+
+    def __init__(
+        self,
+        load_use_case: LoadPdfUseCase,
+        split_use_case: SplitPdfUseCase,
+        record_use_case: RecordSplitUseCase,
+        list_history_use_case: ListHistoryUseCase,
+        file_storage: FileStorage,
+        thread_pool: Optional[QThreadPool] = None,
+    ):
+        super().__init__()
+        self._load_use_case = load_use_case
+        self._split_use_case = split_use_case
+        self._record_use_case = record_use_case
+        self._list_history_use_case = list_history_use_case
+        self._file_storage = file_storage
+        self._thread_pool = thread_pool or QThreadPool.globalInstance()
+
+        self._document: Optional[PdfDocument] = None
+        self._busy = False
+
+        # Sin esta referencia los workers pueden ser recolectados antes de
+        # emitir sus señales, y la operación se pierde en silencio.
+        self._running: Set[Worker] = set()
+
+    # =========================
+    # Estado
+    # =========================
+
+    @property
+    def document(self) -> Optional[PdfDocument]:
+        return self._document
+
+    @property
+    def is_busy(self) -> bool:
+        return self._busy
+
+    @property
+    def has_document(self) -> bool:
+        return self._document is not None
+
+    def suggested_output_path(self, selection: PageSelection) -> Optional[Path]:
+        if self._document is None:
+            return None
+
+        return self._split_use_case.suggest_output_path(self._document, selection)
+
+    # =========================
+    # Acciones
+    # =========================
+
+    def load_document(self, file_path: Path) -> None:
+        """
+        Abre un PDF fuera del hilo de UI. El resultado llega por
+        `document_loaded` o `load_failed`.
+        """
+        if self._busy:
+            return
+
+        self._set_busy(True)
+        self._submit(
+            lambda: self._load_use_case.execute(Path(file_path)),
+            on_success=self._on_document_loaded,
+            on_failure=self._on_load_failed,
+        )
+
+    def split(
+        self,
+        selection: PageSelection,
+        output_path: Optional[Path] = None,
+        policy: OverwritePolicy = OverwritePolicy.FAIL,
+    ) -> None:
+        """
+        Parte el documento cargado. El resultado llega por `split_succeeded` o
+        `split_failed`.
+        """
+        if self._busy or self._document is None:
+            return
+
+        request = SplitPdfRequest(
+            input_path=self._document.storage_path,
+            selection=selection,
+            output_path=output_path,
+            policy=policy,
+        )
+
+        self._set_busy(True)
+        self.split_started.emit()
+        self._submit(
+            lambda: self._split_use_case.execute(request),
+            on_success=self._on_split_succeeded,
+            on_failure=self._on_split_failed,
+        )
+
+    def refresh_history(self, limit: Optional[int] = None) -> None:
+        """
+        Recarga el historial. Es rápido (leer un JSON chico), así que corre en
+        el hilo principal y evita parpadeos en la lista.
+        """
+        try:
+            self.history_changed.emit(self._list_history_use_case.execute(limit))
+        except Exception as error:
+            self.history_failed.emit(error)
+
+    def open_export(self, path: Path) -> None:
+        """
+        Abre un PDF exportado con el visor del sistema.
+
+        :raises FileOpenException: Si el archivo ya no está disponible.
+        """
+        self._file_storage.open_in_default_app(Path(path))
+
+    # =========================
+    # Callbacks del worker
+    # =========================
+
+    def _on_document_loaded(self, document: PdfDocument) -> None:
+        self._document = document
+        self._set_busy(False)
+        self.document_loaded.emit(document)
+
+    def _on_load_failed(self, error: Exception) -> None:
+        self._document = None
+        self._set_busy(False)
+        self.load_failed.emit(error)
+
+    def _on_split_succeeded(self, response) -> None:
+        self._set_busy(False)
+        self.split_succeeded.emit(response)
+
+        # El registro va aparte del split: si el historial no se puede
+        # escribir, el PDF ya está en disco y la operación fue un éxito.
+        try:
+            self._record_use_case.execute(response)
+        except Exception as error:
+            self.history_failed.emit(error)
+
+        self.refresh_history()
+
+    def _on_split_failed(self, error: Exception) -> None:
+        self._set_busy(False)
+        self.split_failed.emit(error)
+
+    # =========================
+    # Internals
+    # =========================
+
+    def _submit(self, operation, on_success, on_failure) -> None:
+        worker = Worker(operation)
+        self._running.add(worker)
+
+        def release(callback):
+            def handler(value):
+                self._running.discard(worker)
+                callback(value)
+
+            return handler
+
+        worker.signals.finished.connect(release(on_success))
+        worker.signals.failed.connect(release(on_failure))
+
+        self._thread_pool.start(worker)
+
+    def _set_busy(self, busy: bool) -> None:
+        if self._busy == busy:
+            return
+
+        self._busy = busy
+        self.busy_changed.emit(busy)

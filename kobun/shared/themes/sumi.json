@@ -1,0 +1,22 @@
+{
+    "name": "sumi",
+    "label": "Sumi · tinta",
+    "colors": {
+        "background": "#eeeeec",
+        "surface": "#fafafa",
+        "surface_alt": "#dedede",
+        "primary": "#1a1a1a",
+        "primary_hover": "#000000",
+        "border": "#d2d2d0",
+        "border_strong": "#b0b0ae",
+        "danger": "#a82a1e",
+        "success": "#3f6b4a",
+        "muted": "#8f8f8d",
+        "text": {
+            "primary": "#121212",
+            "secondary": "#5c5c5a",
+            "inverse": "#fafafa",
+            "disabled": "#a8a8a6"
+        }
+    }
+}

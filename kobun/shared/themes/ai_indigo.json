@@ -1,0 +1,22 @@
+{
+    "name": "ai_indigo",
+    "label": "Ai · índigo",
+    "colors": {
+        "background": "#e6ebf2",
+        "surface": "#f4f7fb",
+        "surface_alt": "#d3dceb",
+        "primary": "#1f3a63",
+        "primary_hover": "#142a4a",
+        "border": "#c2cee0",
+        "border_strong": "#a0b1c9",
+        "danger": "#a3302a",
+        "success": "#396857",
+        "muted": "#7d8a9c",
+        "text": {
+            "primary": "#16202e",
+            "secondary": "#4f5f75",
+            "inverse": "#f4f7fb",
+            "disabled": "#94a3b8"
+        }
+    }
+}

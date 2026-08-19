@@ -1,0 +1,22 @@
+{
+    "name": "kuro",
+    "label": "Kuro · negro",
+    "colors": {
+        "background": "#121212",
+        "surface": "#1c1c1c",
+        "surface_alt": "#2a2a2a",
+        "primary": "#e05a4b",
+        "primary_hover": "#eb7466",
+        "border": "#2e2e2e",
+        "border_strong": "#474747",
+        "danger": "#ef7a6e",
+        "success": "#79c08f",
+        "muted": "#8a8a8a",
+        "text": {
+            "primary": "#f0f0f0",
+            "secondary": "#a8a8a8",
+            "inverse": "#121212",
+            "disabled": "#6a6a6a"
+        }
+    }
+}

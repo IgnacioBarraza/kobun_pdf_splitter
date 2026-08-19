@@ -1,0 +1,22 @@
+{
+    "name": "matcha",
+    "label": "Matcha · verde",
+    "colors": {
+        "background": "#e4e8cf",
+        "surface": "#f2f5e3",
+        "surface_alt": "#cfd7b1",
+        "primary": "#55692e",
+        "primary_hover": "#41521f",
+        "border": "#c5cfa6",
+        "border_strong": "#a7b382",
+        "danger": "#96412c",
+        "success": "#436a3b",
+        "muted": "#86906a",
+        "text": {
+            "primary": "#1f2413",
+            "secondary": "#55603c",
+            "inverse": "#f5f7e8",
+            "disabled": "#9aa578"
+        }
+    }
+}
