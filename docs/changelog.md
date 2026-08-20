@@ -2,6 +2,38 @@
 
 <!-- version list -->
 
+## v0.3.0-alpha.3 (2026-08-20)
+
+### Bug Fixes
+
+- Correct version extraction in unit tests
+  ([`94b4989`](https://github.com/IgnacioBarraza/kobun/commit/94b49891618cc694c61eb90960354f5260dd582e))
+
+- Update installer versioning in Inno Setup script
+  ([`94b4989`](https://github.com/IgnacioBarraza/kobun/commit/94b49891618cc694c61eb90960354f5260dd582e))
+
+### Chores
+
+- Update requirements and pyproject.toml for versioning
+  ([`94b4989`](https://github.com/IgnacioBarraza/kobun/commit/94b49891618cc694c61eb90960354f5260dd582e))
+
+### Features
+
+- Add development and releasing documentation
+  ([`94b4989`](https://github.com/IgnacioBarraza/kobun/commit/94b49891618cc694c61eb90960354f5260dd582e))
+
+- Include new screenshots
+  ([`94b4989`](https://github.com/IgnacioBarraza/kobun/commit/94b49891618cc694c61eb90960354f5260dd582e))
+
+### Refactoring
+
+- Unify naming conventions in Inno Setup script
+  ([`94b4989`](https://github.com/IgnacioBarraza/kobun/commit/94b49891618cc694c61eb90960354f5260dd582e))
+
+- Update PyInstaller spec file comments and variable names
+  ([`94b4989`](https://github.com/IgnacioBarraza/kobun/commit/94b49891618cc694c61eb90960354f5260dd582e))
+
+
 ## v0.3.0-alpha.2 (2026-08-20)
 
 ### Bug Fixes
