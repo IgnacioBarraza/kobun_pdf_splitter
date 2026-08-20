@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.3.0-alpha.2 (2026-08-20)
+
+### Bug Fixes
+
+- Update repository links in project files to reflect new naming convention
+  ([`c48d511`](https://github.com/IgnacioBarraza/kobun/commit/c48d511864468892843f9c7d9c78764c27f22c60))
+
+
 ## v0.3.0-alpha.1 (2026-08-20)
 
 ### Features

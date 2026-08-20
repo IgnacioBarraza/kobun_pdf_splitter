@@ -13,7 +13,7 @@
 ; control, y elección del directorio de instalación.
 
 #define MiNombre "Kobun"
-#define MiVersion "0.3.0-alpha.1"
+#define MiVersion "0.3.0-alpha.2"
 #define MiAutor "Ignacio Barraza"
 #define MiEjecutable "kobun.exe"
 
