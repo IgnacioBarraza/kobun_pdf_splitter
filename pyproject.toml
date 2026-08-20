@@ -41,7 +41,7 @@ release = ["python-semantic-release>=10,<11"]
 kobun = "kobun.presentation.qt.qt_app:run"
 
 [project.urls]
-Repository = "https://github.com/IgnacioBarraza/kobun_pdf_splitter"
+Repository = "https://github.com/IgnacioBarraza/kobun"
 
 [tool.setuptools.dynamic]
 # A single source of truth for the version: the package.
