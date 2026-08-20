@@ -1,8 +1,6 @@
 name: tests
 
-# No se dispara sola: la llaman ci.yml y release.yml. Está separada para que la
-# suite sea una sola definición y no dos que se van desincronizando —antes de
-# publicar corren exactamente los mismos tests que en un PR.
+# Called by ci.yml and release.yml, so the suite has a single definition.
 on:
   workflow_call:
 
@@ -11,8 +9,6 @@ jobs:
     name: suite
     runs-on: ubuntu-latest
     env:
-      # Qt necesita una plataforma sin pantalla en CI; sin esto los tests de
-      # interfaz fallan al no encontrar display.
       QT_QPA_PLATFORM: offscreen
     steps:
       - uses: actions/checkout@v4
@@ -20,15 +16,13 @@ jobs:
       - uses: ./.github/actions/python-env
         with:
           extras: dev
-          qt-para-ejecutar: "true"
+          qt-runtime: "true"
 
-      - name: Suite completa
+      - name: Full suite
         run: pytest -q
 
-      - name: Suite de dominio sin dependencias
-        # Verifica el invariante del proyecto: unit/ tiene que correr sin
-        # PyMuPDF ni PySide6 instalados.
+      - name: Domain suite without dependencies
         run: |
-          python -m venv /tmp/pelado
-          /tmp/pelado/bin/pip install -q pytest
-          /tmp/pelado/bin/python -m pytest kobun/tests/unit -q
+          python -m venv /tmp/bare
+          /tmp/bare/bin/pip install -q pytest
+          /tmp/bare/bin/python -m pytest kobun/tests/unit -q

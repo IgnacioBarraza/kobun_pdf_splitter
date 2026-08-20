@@ -1,20 +1,21 @@
 #!/usr/bin/env python3
 """
-Redacta las notas de una release a partir de los commits desde el tag anterior.
+Write the notes of a release from the commits since the previous tag.
 
     python3 scripts/release_notes.py v0.2.0
-    python3 scripts/release_notes.py v0.2.0 --salida notas.md
+    python3 scripts/release_notes.py v0.2.0 --output notes.md
 
-Los commits del proyecto siguen la convención `tipo: descripción`, así que las
-secciones se pueden armar solas y lo único que se mantiene a mano es el bloque
-de instalación, que no depende de los cambios.
+Commits in this project follow the `type: description` convention, so the
+sections can build themselves and the only hand-written part is the install
+block, which does not depend on the changes.
 
-Estas notas son la vitrina de la release —lo que ve quien entra a descargar la
-app—; el registro histórico lo escribe semantic-release en docs/changelog.md.
-Por eso son dos formatos distintos: uno agrupa para leer, el otro archiva.
+These notes are the shop window of a release — what someone landing on the page
+to download the app reads. The historical record is written by semantic-release
+into docs/changelog.md. That is why the two formats differ: one groups for
+reading, the other archives.
 
-No usa ninguna dependencia: tiene que poder correr en el runner de la release
-sin instalar el proyecto.
+No dependencies: this has to run on the release runner without installing the
+project.
 """
 import argparse
 import os
@@ -25,20 +26,20 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
 
-RAIZ = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent
 
-# Separador de unidad: no puede aparecer en el asunto de un commit, a diferencia
-# de cualquier carácter imprimible que se nos ocurra.
-SEPARADOR = "\x1f"
+# Unit separator: unlike any printable character, it cannot show up in a commit
+# subject.
+FIELD_SEPARATOR = "\x1f"
 
-# Marca para los commits que no siguen la convención.
-SIN_TIPO = "*"
+# Marker for commits that do not follow the convention.
+NO_TYPE = "*"
 
-OTROS = "Otros cambios"
+OTHER = "Other changes"
 
-# Cambios que no le dicen nada a quien sólo quiere usar la app: se publican,
-# pero plegados.
-TIPOS_INTERNOS = (
+# Changes that say nothing to someone who just wants to use the app: published,
+# but folded away.
+INTERNAL_TYPES = (
     "refactor",
     "chore",
     "docs",
@@ -51,384 +52,385 @@ TIPOS_INTERNOS = (
     "revert",
 )
 
-# (título, tipos que agrupa, plegada). El orden es el de aparición en las notas.
-SECCIONES: Tuple[Tuple[str, Tuple[str, ...], bool], ...] = (
-    ("Nuevo", ("feat",), False),
-    ("Correcciones", ("fix",), False),
-    ("Rendimiento", ("perf",), False),
-    (OTROS, (SIN_TIPO,), False),
-    ("Interno", TIPOS_INTERNOS, True),
+# (title, types it groups, folded). The order is the order in the notes.
+SECTIONS: Tuple[Tuple[str, Tuple[str, ...], bool], ...] = (
+    ("New", ("feat",), False),
+    ("Fixes", ("fix",), False),
+    ("Performance", ("perf",), False),
+    (OTHER, (NO_TYPE,), False),
+    ("Internal", INTERNAL_TYPES, True),
 )
 
-TITULO_ROTURA = "Cambios que rompen compatibilidad"
+BREAKING_TITLE = "Breaking changes"
 
-PATRON_COMMIT = re.compile(
-    r"^(?P<tipo>[A-Za-z]+)(?:\((?P<ambito>[^)]*)\))?(?P<rotura>!)?:\s*(?P<texto>.+)$"
+# The commit semantic-release writes when versioning is not a change to the
+# project: it would show up as "chore(release): v0.2.0" in the middle of the
+# notes.
+RELEASE_COMMIT = ("chore", "release")
+
+COMMIT_PATTERN = re.compile(
+    r"^(?P<type>[A-Za-z]+)(?:\((?P<scope>[^)]*)\))?(?P<breaking>!)?:\s*(?P<text>.+)$"
 )
 
-PATRON_VERSION = re.compile(r'__version__\s*=\s*["\']([^"\']+)["\']')
+VERSION_PATTERN = re.compile(r'__version__\s*=\s*["\']([^"\']+)["\']')
 
-# El commit que escribe semantic-release al versionar no es un cambio del
-# proyecto: aparecería como "chore(release): v0.2.0" en medio de las notas.
-TIPO_DE_RELEASE = ("chore", "release")
-
-AVISO_PRERELEASE = (
-    "> **Versión de prueba.** Sale automáticamente de `develop` para poder probar "
-    "los cambios antes de que salgan como versión definitiva. Puede tener fallas; "
-    "si buscás la última versión estable, andá a "
+PRERELEASE_WARNING = (
+    "> **Test build.** Published automatically from `develop` so changes can be tried "
+    "before they become a definitive version. It may have rough edges; for the latest "
+    "stable version go to "
     "[releases](https://github.com/IgnacioBarraza/kobun_pdf_splitter/releases/latest)."
 )
 
-INSTALACION = """## Instalación
+INSTALL = """## Install
 
 ### Windows
 
-`kobun.exe` es portable: se descarga y se abre, no se instala.
+`kobun.exe` is portable: download it and open it, there is nothing to install.
 
 ### Linux
 
-**Recomendado**: el `.deb`, que instala la app en el menú de aplicaciones con su
-icono.
+**Recommended**: the `.deb`, which installs the app into the application menu
+with its icon.
 
 ```
 sudo apt install ./kobun_*_amd64.deb
 ```
 
-El binario suelto `kobun` sirve para otras distribuciones, pero tené en cuenta
-dos cosas: hay que darle permiso con `chmod +x` (el ZIP de descarga no lo
-preserva) y **los exploradores de archivos modernos no lanzan binarios con doble
-clic**, así que hay que ejecutarlo desde una terminal."""
+The standalone `kobun` binary works on other distributions, but two things to
+know: you have to make it executable with `chmod +x` (the download ZIP does not
+preserve it) and **modern file managers will not launch a binary on double
+click**, so run it from a terminal."""
 
 
-class ErrorDeGit(RuntimeError):
+class GitError(RuntimeError):
     pass
 
 
 @dataclass(frozen=True)
 class Commit:
     hash: str
-    tipo: str
-    ambito: Optional[str]
-    texto: str
-    rotura: bool
+    type: str
+    scope: Optional[str]
+    text: str
+    breaking: bool
 
 
 # =========================
-# Lectura de la historia
+# Reading the history
 # =========================
 
 
-def _git(*argumentos: str) -> str:
-    resultado = subprocess.run(
-        ("git", "-C", str(RAIZ), *argumentos),
+def _git(*arguments: str) -> str:
+    result = subprocess.run(
+        ("git", "-C", str(ROOT), *arguments),
         capture_output=True,
         text=True,
     )
 
-    if resultado.returncode != 0:
-        raise ErrorDeGit(resultado.stderr.strip() or f"git {' '.join(argumentos)} falló")
+    if result.returncode != 0:
+        raise GitError(result.stderr.strip() or f"git {' '.join(arguments)} failed")
 
-    return resultado.stdout.strip()
+    return result.stdout.strip()
 
 
-def tag_de_head() -> str:
-    """El tag que apunta exactamente a HEAD, para no tener que escribirlo."""
+def tag_of_head() -> str:
+    """The tag pointing exactly at HEAD, so it does not have to be typed."""
     try:
         return _git("describe", "--tags", "--exact-match", "HEAD")
-    except ErrorDeGit:
+    except GitError:
         raise SystemExit(
-            "HEAD no está etiquetado: pasá el tag como argumento.\n"
+            "HEAD is not tagged: pass the tag as an argument.\n"
             "    python3 scripts/release_notes.py v0.2.0"
         )
 
 
-def es_prerelease(tag: str) -> bool:
-    """`v0.2.0-alpha.1` sí, `v0.2.0` no: el guión sólo aparece en el sufijo."""
+def is_prerelease(tag: str) -> bool:
+    """`v0.2.0-alpha.1` yes, `v0.2.0` no: the hyphen only appears in the suffix."""
     return "-" in tag.lstrip("vV")
 
 
-def tag_anterior(tag: str, solo_estables: bool = False) -> Optional[str]:
+def previous_tag(tag: str, stable_only: bool = False) -> Optional[str]:
     """
-    El tag anterior alcanzable desde `tag`, o None si es la primera release.
+    The previous tag reachable from `tag`, or None on a first release.
 
-    Se busca desde el padre del tag y no desde el tag mismo, porque describe
-    devolvería el propio tag.
+    It looks from the tag's parent and not from the tag itself, because describe
+    would return the tag.
 
-    `solo_estables` es lo que hace que una versión definitiva no salga vacía:
-    los cambios ya se publicaron en las prereleases, así que si el tag anterior
-    fuera el último alpha no quedaría nada que contar. Se compara contra el
-    último estable y la nota cuenta todo lo que pasó desde entonces.
+    `stable_only` is what keeps a definitive version from coming out empty: its
+    changes were already published in the prereleases, so if the previous tag
+    were the last alpha there would be nothing left to tell. Comparing against
+    the last stable tag makes the notes cover everything since then.
     """
-    argumentos = ["describe", "--tags", "--abbrev=0"]
-    if solo_estables:
-        argumentos.append("--exclude=*-*")
+    arguments = ["describe", "--tags", "--abbrev=0"]
+    if stable_only:
+        arguments.append("--exclude=*-*")
 
     try:
-        return _git(*argumentos, f"{tag}^")
-    except ErrorDeGit:
+        return _git(*arguments, f"{tag}^")
+    except GitError:
         return None
 
 
-def verificar_revision(revision: str) -> None:
+def check_revision(revision: str) -> None:
     """
-    Un tag inexistente es el error más fácil de cometer —escribir el tag antes
-    de crearlo— y sin esto se manifiesta como un traceback de git.
+    A tag that does not exist is the easiest mistake to make — writing the tag
+    before creating it — and without this it shows up as a git traceback.
     """
     try:
         _git("rev-parse", "--verify", "--quiet", f"{revision}^{{commit}}")
-    except ErrorDeGit:
+    except GitError:
         raise SystemExit(
-            f"{revision} no existe en este repositorio.\n"
-            "Si es un tag nuevo, crealo antes:  git tag v0.2.0"
+            f"{revision} does not exist in this repository.\n"
+            "If it is a new tag, create it first:  git tag v0.2.0"
         )
 
 
-def leer_commits(tag: str, desde: Optional[str]) -> List[Commit]:
-    rango = f"{desde}..{tag}" if desde else tag
+def read_commits(tag: str, since: Optional[str]) -> List[Commit]:
+    span = f"{since}..{tag}" if since else tag
 
-    # Sin merges: "Merge pull request #1 from ..." no es un cambio, es cómo
-    # entró el cambio.
-    salida = _git("log", rango, "--no-merges", f"--pretty=%h{SEPARADOR}%s")
+    # No merges: "Merge pull request #1 from ..." is not a change, it is how the
+    # change got in.
+    output = _git("log", span, "--no-merges", f"--pretty=%h{FIELD_SEPARATOR}%s")
 
-    commits = [parsear(*linea.split(SEPARADOR, 1)) for linea in salida.splitlines() if linea.strip()]
+    commits = [parse(*line.split(FIELD_SEPARATOR, 1)) for line in output.splitlines() if line.strip()]
 
-    return [commit for commit in commits if not es_commit_de_release(commit)]
+    return [commit for commit in commits if not is_release_commit(commit)]
 
 
-def slug_del_repo() -> Optional[str]:
-    """`usuario/repo`, para armar el enlace de comparación."""
-    del_entorno = os.environ.get("GITHUB_REPOSITORY")
-    if del_entorno:
-        return del_entorno
+def repository_slug() -> Optional[str]:
+    """`user/repo`, to build the comparison link."""
+    from_environment = os.environ.get("GITHUB_REPOSITORY")
+    if from_environment:
+        return from_environment
 
     try:
         url = _git("remote", "get-url", "origin")
-    except ErrorDeGit:
+    except GitError:
         return None
 
-    coincidencia = re.search(r"[:/]([^/:]+/[^/]+?)(?:\.git)?$", url)
+    match = re.search(r"[:/]([^/:]+/[^/]+?)(?:\.git)?$", url)
 
-    return coincidencia.group(1) if coincidencia else None
+    return match.group(1) if match else None
 
 
 # =========================
-# Clasificación
+# Classification
 # =========================
 
 
-def parsear(hash_corto: str, asunto: str) -> Commit:
-    coincidencia = PATRON_COMMIT.match(asunto.strip())
+def parse(short_hash: str, subject: str) -> Commit:
+    match = COMMIT_PATTERN.match(subject.strip())
 
-    if coincidencia is None:
-        return Commit(hash=hash_corto, tipo=SIN_TIPO, ambito=None, texto=asunto.strip(), rotura=False)
+    if match is None:
+        return Commit(hash=short_hash, type=NO_TYPE, scope=None, text=subject.strip(), breaking=False)
 
-    ambito = coincidencia.group("ambito")
+    scope = match.group("scope")
 
     return Commit(
-        hash=hash_corto,
-        tipo=coincidencia.group("tipo").lower(),
-        ambito=ambito.strip() if ambito else None,
-        texto=coincidencia.group("texto").strip(),
-        rotura=coincidencia.group("rotura") is not None,
+        hash=short_hash,
+        type=match.group("type").lower(),
+        scope=scope.strip() if scope else None,
+        text=match.group("text").strip(),
+        breaking=match.group("breaking") is not None,
     )
 
 
-def es_commit_de_release(commit: Commit) -> bool:
-    """El commit que versiona no es un cambio: lo escribe la propia release."""
-    return (commit.tipo, commit.ambito) == TIPO_DE_RELEASE
+def is_release_commit(commit: Commit) -> bool:
+    """The versioning commit is not a change: the release itself writes it."""
+    return (commit.type, commit.scope) == RELEASE_COMMIT
 
 
-def _titulo_de(commit: Commit) -> str:
-    if commit.rotura:
-        return TITULO_ROTURA
+def _title_for(commit: Commit) -> str:
+    if commit.breaking:
+        return BREAKING_TITLE
 
-    for titulo, tipos, _ in SECCIONES:
-        if commit.tipo in tipos:
-            return titulo
+    for title, types, _ in SECTIONS:
+        if commit.type in types:
+            return title
 
-    # Un tipo que no conocemos igual es un cambio: cae en "Otros cambios" antes
-    # que desaparecer de las notas.
-    return OTROS
+    # A type we do not know is still a change: it lands in "Other changes"
+    # rather than disappearing from the notes.
+    return OTHER
 
 
-def agrupar(commits: Sequence[Commit]) -> Dict[str, List[Commit]]:
+def group(commits: Sequence[Commit]) -> Dict[str, List[Commit]]:
     """
-    Agrupa por sección, sin repetir textos.
+    Groups by section, without repeating texts.
 
-    Los duplicados aparecen solos con rebases y cherry-picks; en las notas se
-    leen como si el cambio se hubiera hecho dos veces.
+    Duplicates appear on their own with rebases and cherry-picks; in the notes
+    they read as if the change had been made twice.
     """
-    grupos: Dict[str, List[Commit]] = {}
-    vistos = set()
+    groups: Dict[str, List[Commit]] = {}
+    seen = set()
 
     for commit in commits:
-        clave = (commit.tipo, commit.ambito, commit.texto)
-        if clave in vistos:
+        key = (commit.type, commit.scope, commit.text)
+        if key in seen:
             continue
 
-        vistos.add(clave)
-        grupos.setdefault(_titulo_de(commit), []).append(commit)
+        seen.add(key)
+        groups.setdefault(_title_for(commit), []).append(commit)
 
-    return grupos
+    return groups
 
 
 # =========================
-# Redacción
+# Writing
 # =========================
 
 
-def _linea(commit: Commit) -> str:
-    # El texto va tal cual lo escribió quien commiteó: capitalizarlo rompería
-    # nombres como `pyproject.toml` u `open_in_default_app`.
-    texto = f"**{commit.ambito}**: {commit.texto}" if commit.ambito else commit.texto
+def _line(commit: Commit) -> str:
+    # The text goes exactly as it was committed: capitalising it would break
+    # names like `pyproject.toml` or `open_in_default_app`.
+    text = f"**{commit.scope}**: {commit.text}" if commit.scope else commit.text
 
-    # GitHub convierte el hash en enlace al commit por su cuenta.
-    return f"- {texto} ({commit.hash})"
-
-
-def _bloque(titulo: str, commits: Sequence[Commit], plegado: bool) -> str:
-    lineas = "\n".join(_linea(commit) for commit in commits)
-
-    if plegado:
-        return f"<details>\n<summary>{titulo} ({len(commits)})</summary>\n\n{lineas}\n\n</details>"
-
-    return f"### {titulo}\n\n{lineas}"
+    # GitHub turns the hash into a link to the commit on its own.
+    return f"- {text} ({commit.hash})"
 
 
-def _orden_de_secciones() -> List[Tuple[str, bool]]:
-    # Lo que rompe compatibilidad va primero: es lo que puede obligar a hacer
-    # algo antes de actualizar.
-    return [(TITULO_ROTURA, False)] + [(titulo, plegada) for titulo, _, plegada in SECCIONES]
+def _block(title: str, commits: Sequence[Commit], folded: bool) -> str:
+    lines = "\n".join(_line(commit) for commit in commits)
+
+    if folded:
+        return f"<details>\n<summary>{title} ({len(commits)})</summary>\n\n{lines}\n\n</details>"
+
+    return f"### {title}\n\n{lines}"
 
 
-def construir_notas(
+def _section_order() -> List[Tuple[str, bool]]:
+    # What breaks compatibility goes first: it is what may force someone to do
+    # something before updating.
+    return [(BREAKING_TITLE, False)] + [(title, folded) for title, _, folded in SECTIONS]
+
+
+def build_notes(
     commits: Sequence[Commit],
     tag: str,
-    anterior: Optional[str],
+    previous: Optional[str],
     slug: Optional[str] = None,
 ) -> str:
-    # La instalación va arriba: la mayoría de quienes abren una release vienen a
-    # descargar la app, no a leer el changelog. Antes va el aviso, si aplica:
-    # quien descarga una alpha tiene que saberlo antes de bajar el binario.
-    partes = [AVISO_PRERELEASE] if es_prerelease(tag) else []
-    partes += [INSTALACION, "## Cambios"]
+    # Installing goes on top: most people opening a release came to download the
+    # app, not to read the changelog. The warning goes before that, when it
+    # applies: whoever downloads an alpha has to know before fetching a binary.
+    parts = [PRERELEASE_WARNING] if is_prerelease(tag) else []
+    parts += [INSTALL, "## Changes"]
 
     if not commits:
-        partes.append(f"Sin cambios registrados{f' desde {anterior}' if anterior else ''}.")
+        parts.append(f"No changes recorded{f' since {previous}' if previous else ''}.")
     else:
-        if anterior is None:
-            partes.append("Primera versión publicada.")
+        if previous is None:
+            parts.append("First published version.")
 
-        grupos = agrupar(commits)
+        groups = group(commits)
 
-        for titulo, plegada in _orden_de_secciones():
-            if titulo in grupos:
-                partes.append(_bloque(titulo, grupos[titulo], plegada))
+        for title, folded in _section_order():
+            if title in groups:
+                parts.append(_block(title, groups[title], folded))
 
-    enlace = _enlace_de_comparacion(tag, anterior, slug)
-    if enlace:
-        partes.append(enlace)
+    link = _comparison_link(tag, previous, slug)
+    if link:
+        parts.append(link)
 
-    return "\n\n".join(partes) + "\n"
+    return "\n\n".join(parts) + "\n"
 
 
-def _enlace_de_comparacion(tag: str, anterior: Optional[str], slug: Optional[str]) -> Optional[str]:
+def _comparison_link(tag: str, previous: Optional[str], slug: Optional[str]) -> Optional[str]:
     if not slug:
         return None
 
     base = f"https://github.com/{slug}"
 
-    if anterior:
-        return f"**Todos los cambios**: {base}/compare/{anterior}...{tag}"
+    if previous:
+        return f"**Full changelog**: {base}/compare/{previous}...{tag}"
 
-    return f"**Todos los cambios**: {base}/commits/{tag}"
+    return f"**Full changelog**: {base}/commits/{tag}"
 
 
 # =========================
-# Coherencia de la versión
+# Version consistency
 # =========================
 
 
-def version_del_paquete() -> str:
+def package_version() -> str:
     """
-    Se lee el archivo en vez de importar el paquete: así el script sigue siendo
-    stdlib puro y no depende de que kobun sea importable en el runner.
+    The file is read instead of importing the package: that keeps this script
+    pure stdlib and independent of kobun being importable on the runner.
     """
-    texto = (RAIZ / "kobun" / "__init__.py").read_text(encoding="utf-8")
-    coincidencia = PATRON_VERSION.search(texto)
+    text = (ROOT / "kobun" / "__init__.py").read_text(encoding="utf-8")
+    match = VERSION_PATTERN.search(text)
 
-    if coincidencia is None:
-        raise SystemExit("No se pudo leer __version__ de kobun/__init__.py")
+    if match is None:
+        raise SystemExit("Could not read __version__ from kobun/__init__.py")
 
-    return coincidencia.group(1)
+    return match.group(1)
 
 
-def version_del_tag(tag: str) -> str:
-    """`v0.2.0-alpha.1` -> `0.2.0-alpha.1`: sólo se cae la `v` del formato."""
+def version_of_tag(tag: str) -> str:
+    """`v0.2.0-alpha.1` -> `0.2.0-alpha.1`: only the format's `v` falls off."""
     return tag.lstrip("vV")
 
 
-def verificar_version(tag: str) -> None:
+def check_version(tag: str) -> None:
     """
-    El sufijo de prerelease se compara también: semantic-release escribe
-    `0.2.0-alpha.1` en el paquete, así que la app dice exactamente lo mismo que
-    el tag y cualquier diferencia es una desincronización real.
+    The prerelease suffix is compared too: semantic-release writes
+    `0.2.0-alpha.1` into the package, so the app says exactly what the tag says
+    and any difference is a real desynchronisation.
     """
-    esperada = version_del_paquete()
-    encontrada = version_del_tag(tag)
+    expected = package_version()
+    found = version_of_tag(tag)
 
-    if encontrada != esperada:
+    if found != expected:
         raise SystemExit(
-            f"El tag {tag} no coincide con la versión del paquete ({esperada}).\n"
-            "La versión se muestra dentro de la app, así que publicar con este tag\n"
-            f"haría que Kobun dijera v{esperada} siendo la release {tag}.\n"
-            "Normalmente esto significa que el tag se creó a mano: los tags los\n"
-            "crea semantic-release al versionar, y ahí los dos salen del mismo lugar."
+            f"Tag {tag} does not match the package version ({expected}).\n"
+            "The version is shown inside the app, so publishing with this tag\n"
+            f"would make Kobun say v{expected} while being release {tag}.\n"
+            "Usually this means the tag was created by hand: tags are created by\n"
+            "semantic-release when it versions, and there both come from one place."
         )
 
 
 # =========================
-# Entrada
+# Entry point
 # =========================
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("tag", nargs="?", help="Tag de la release (por defecto, el que apunta a HEAD)")
-    parser.add_argument("--desde", help="Tag o commit de referencia (por defecto, el tag anterior)")
-    parser.add_argument("--salida", type=Path, help="Archivo donde escribir (por defecto, la salida estándar)")
+    parser.add_argument("tag", nargs="?", help="Release tag (defaults to the one pointing at HEAD)")
+    parser.add_argument("--from", dest="since", help="Reference tag or commit (defaults to the previous tag)")
+    parser.add_argument("--output", type=Path, help="File to write to (defaults to standard output)")
     parser.add_argument(
-        "--sin-verificar-version",
+        "--skip-version-check",
         action="store_true",
-        help="No exigir que el tag coincida con kobun.__version__",
+        help="Do not require the tag to match kobun.__version__",
     )
     args = parser.parse_args(argv)
 
-    tag = args.tag or tag_de_head()
+    tag = args.tag or tag_of_head()
 
-    if not args.sin_verificar_version:
-        verificar_version(tag)
+    if not args.skip_version_check:
+        check_version(tag)
 
-    verificar_revision(tag)
+    check_revision(tag)
 
-    # Una versión definitiva se compara contra la última definitiva; una
-    # prerelease, contra el tag inmediatamente anterior.
-    anterior = args.desde or tag_anterior(tag, solo_estables=not es_prerelease(tag))
-    if anterior:
-        verificar_revision(anterior)
+    # A definitive version is compared against the last definitive one; a
+    # prerelease, against the tag immediately before it.
+    previous = args.since or previous_tag(tag, stable_only=not is_prerelease(tag))
+    if previous:
+        check_revision(previous)
 
     try:
-        commits = leer_commits(tag, anterior)
-    except ErrorDeGit as error:
-        raise SystemExit(f"git falló: {error}")
+        commits = read_commits(tag, previous)
+    except GitError as error:
+        raise SystemExit(f"git failed: {error}")
 
-    notas = construir_notas(commits, tag, anterior, slug_del_repo())
+    notes = build_notes(commits, tag, previous, repository_slug())
 
-    if args.salida:
-        args.salida.write_text(notas, encoding="utf-8")
-        print(f"{args.salida}: {len(commits)} commits desde {anterior or 'el inicio'}", file=sys.stderr)
+    if args.output:
+        args.output.write_text(notes, encoding="utf-8")
+        print(f"{args.output}: {len(commits)} commits since {previous or 'the beginning'}", file=sys.stderr)
     else:
-        sys.stdout.write(notas)
+        sys.stdout.write(notes)
 
     return 0
 

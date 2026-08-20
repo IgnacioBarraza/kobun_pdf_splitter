@@ -322,8 +322,9 @@ semantic-release's own format, written by the tool.
 
 The GitHub release body is the **shop window**, written by
 [`scripts/release_notes.py`](scripts/release_notes.py): it leads with the
-install instructions, groups changes in Spanish, folds `refactor:`/`chore:`/`ci:`
-away in a `<details>`, and warns when the download is a pre-release.
+install instructions, groups changes under plain headings (*New*, *Fixes*,
+*Performance*), folds `refactor:`/`chore:`/`ci:` away in a `<details>`, and warns
+when the download is a pre-release.
 
 It also fixes something the record cannot: semantic-release attributes each
 commit to the tag that first published it, so a stable release that follows a
@@ -333,7 +334,7 @@ version — not against the last alpha — so the release that people actually
 download lists everything that changed since the previous one they had.
 
 Commits that do not follow the convention are never dropped from the notes: they
-land in *Otros cambios*. They just do not move the version.
+land in *Other changes*. They just do not move the version.
 
 ---
 

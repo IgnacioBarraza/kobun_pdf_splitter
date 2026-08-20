@@ -30,13 +30,13 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
-# PyInstaller no es una dependencia de la app: sólo hace falta para generar el
-# ejecutable, y no debe viajar al usuario final.
+# PyInstaller is not a dependency of the app: it is only needed to produce the
+# executable, and must not travel to the end user.
 build = ["pyinstaller>=6.0"]
-# Sólo lo usa el CI para versionar y publicar.
+# Only CI uses this, to version and publish.
 release = ["python-semantic-release>=10,<11"]
 
-# gui-scripts y no scripts: en Windows genera un lanzador sin consola detrás.
+# gui-scripts and not scripts: on Windows it produces a launcher with no console behind it.
 [project.gui-scripts]
 kobun = "kobun.presentation.qt.qt_app:run"
 
@@ -44,16 +44,16 @@ kobun = "kobun.presentation.qt.qt_app:run"
 Repository = "https://github.com/IgnacioBarraza/kobun_pdf_splitter"
 
 [tool.setuptools.dynamic]
-# Una sola fuente de verdad para la versión: el paquete.
+# A single source of truth for the version: the package.
 version = { attr = "kobun.__version__" }
 
 [tool.setuptools.packages.find]
 include = ["kobun*"]
 exclude = ["kobun.tests*"]
 
-# Los temas, los iconos y las flechas del selector no son .py, así que sin
-# declararlos quedan fuera de cualquier distribución y la app se instalaría
-# sin colores ni icono.
+# Themes, icons and the combo box arrows are not .py, so without declaring them
+# they fall out of any distribution and the app would install with no colours and
+# no icon.
 [tool.setuptools.package-data]
 "kobun.shared" = [
     "themes/*.json",
@@ -66,45 +66,45 @@ exclude = ["kobun.tests*"]
 testpaths = ["kobun/tests"]
 
 # =============================================================================
-# Versionado automático
+# Automatic versioning
 # =============================================================================
-# La versión no se sube a mano: sale de los commits. `feat:` levanta el minor,
-# `fix:`/`perf:` el patch, y el resto no publica nada. Es el esquema de
-# semantic-release; se usa la implementación en Python para no arrastrar Node a
-# un proyecto que no lo necesita.
+# The version is not bumped by hand: it comes from the commits. `feat:` raises
+# the minor, `fix:`/`perf:` the patch, everything else publishes nothing. This is
+# the semantic-release scheme, using the Python implementation so as not to drag
+# Node into a project that does not need it.
 [tool.semantic_release]
-# El mismo archivo que lee setuptools: una sola fuente de verdad para la
-# versión, que además es la que la app muestra en su barra lateral.
+# The same file setuptools reads: one source of truth for the version, which is
+# also the one the app shows in its sidebar.
 version_variables = [
     "kobun/__init__.py:__version__",
-    # El instalador de Windows declara su propia versión, y quedarse atrás no se
-    # nota hasta que alguien instala un setup etiquetado con una versión vieja.
-    # El patrón acepta definiciones estilo macro de C, así que #define alcanza.
+    # The Windows installer declares its own version, and falling behind is not
+    # noticed until someone installs a setup labelled with an old one. The pattern
+    # accepts C-macro style definitions, so #define is enough.
     "packaging/kobun.iss:MiVersion",
 ]
 tag_format = "v{version}"
 
-# 0.x es una versión válida: sin esto la primera publicación automática saltaría
-# directo a 1.0.0.
+# 0.x is a valid version: without this the first automatic release would jump
+# straight to 1.0.0.
 allow_zero_version = true
-# Antes de 1.0.0 un cambio que rompe compatibilidad no justifica un major: la
-# API todavía no prometió estabilidad.
+# Below 1.0.0 a breaking change does not justify a major: the API has not
+# promised stability yet.
 major_on_zero = false
 
-# Los binarios los construye el workflow en cada sistema; semantic-release sólo
-# versiona, así que no tiene nada que construir acá.
+# The workflow builds the binaries on each system; semantic-release only
+# versions, so it has nothing to build here.
 build_command = ""
 
-# El mensaje es conventional a propósito: si más adelante se valida el formato
-# de los commits, el que escribe la propia release no puede ser el que falle.
+# The message is conventional on purpose: if commit format is ever validated,
+# the one the release writes itself cannot be the one that fails.
 commit_message = "chore(release): v{version} [skip ci]"
-# El commit lo empuja la GitHub App kobun-release-bot, que es la que el
-# ruleset de main deja pasar; el número es el id de su usuario bot, y es lo
-# que hace que GitHub le ponga su avatar al commit.
+# The commit is pushed by the kobun-release-bot GitHub App, the one the ruleset
+# on main lets through; the number is its bot user id, which is what makes GitHub
+# attach its avatar to the commit.
 commit_author = "kobun-release-bot[bot] <318829460+kobun-release-bot[bot]@users.noreply.github.com>"
 
-# main publica versiones definitivas; develop publica prereleases numeradas
-# (0.2.0-alpha.1, .2, …) para poder probar los binarios antes de que salgan.
+# main publishes definitive versions; develop publishes numbered prereleases
+# (0.2.0-alpha.1, .2, …) so the binaries can be tried before they are final.
 [tool.semantic_release.branches.main]
 match = "main"
 prerelease = false
@@ -115,15 +115,15 @@ prerelease = true
 prerelease_token = "alpha"
 
 [tool.semantic_release.changelog]
-# "update" inserta la versión nueva y deja intacto lo ya escrito.
+# "update" inserts the new version and leaves what is already written alone.
 mode = "update"
-# Los commits de la propia release no son cambios del proyecto.
+# The release's own commits are not changes to the project.
 exclude_commit_patterns = ['^chore\(release\):']
 
 [tool.semantic_release.changelog.default_templates]
 changelog_file = "docs/changelog.md"
 
-# Los archivos que se adjuntan a la release los sube el workflow con `gh`,
-# porque se construyen en runners distintos y en un paso posterior.
+# The workflow uploads the release assets with `gh`, because they are built on
+# different runners and in a later step.
 [tool.semantic_release.publish]
 upload_to_vcs_release = false

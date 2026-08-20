@@ -1,32 +1,19 @@
 name: ci
 
-# Verificación: ¿está sano el código? No publica nada.
-#
-# Ojo con el branches-ignore: filtra sólo el evento `push`, y ahí la rama es la
-# que recibe el commit, no la que apunta un PR. El trigger `pull_request` no
-# tiene filtro, así que un PR hacia develop entra igual. En orden:
-#
-#   push a feature/x          -> corre acá
-#   PR feature/x -> develop   -> corre acá (por el pull_request)
-#   el merge cae en develop   -> corre release.yml, que llama a la misma suite
-#
-# Nada entra a develop sin pasar los tests. Lo único que evita el ignore es
-# correrlos dos veces sobre el mismo commit de merge.
+# branches-ignore filters the push event only: a pull request into develop still
+# runs, through the pull_request trigger. Pushes to main and develop are covered
+# by release.yml, which calls the same suite before versioning.
 on:
   pull_request:
   push:
     branches-ignore: [main, develop]
   workflow_dispatch:
 
-# Una corrida por rama: si pusheás dos veces seguidas, la primera se cancela en
-# vez de construir cuatro binarios que ya no le importan a nadie.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 env:
-  # PyInstaller importa PySide6 para analizarlo; sin display eso puede intentar
-  # abrir una conexión que en el runner no existe.
   QT_QPA_PLATFORM: offscreen
 
 jobs:
@@ -34,7 +21,7 @@ jobs:
     uses: ./.github/workflows/tests.yml
 
   build:
-    name: build ${{ matrix.nombre }}
+    name: build ${{ matrix.name }}
     needs: tests
     runs-on: ${{ matrix.os }}
     strategy:
@@ -42,11 +29,11 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            nombre: linux
-            artefacto: kobun
+            name: linux
+            artifact: kobun
           - os: windows-latest
-            nombre: windows
-            artefacto: kobun.exe
+            name: windows
+            artifact: kobun.exe
 
     steps:
       - uses: actions/checkout@v4
@@ -57,12 +44,11 @@ jobs:
 
       - uses: ./.github/actions/build-app
         with:
-          artefacto: ${{ matrix.artefacto }}
+          artifact: ${{ matrix.artifact }}
 
-      # Sirve para probar el binario de una rama sin esperar una release.
       - uses: actions/upload-artifact@v4
         with:
-          name: kobun-${{ matrix.nombre }}
-          path: dist/${{ matrix.artefacto }}
+          name: kobun-${{ matrix.name }}
+          path: dist/${{ matrix.artifact }}
           retention-days: 30
           if-no-files-found: error

@@ -1,48 +1,39 @@
-name: Construir el ejecutable
-description: Genera el binario del sistema donde corre, el .deb en Linux, y comprueba que la salida sirva.
-
-# PyInstaller **no compila cruzado**: el .exe de Windows sale del runner de
-# Windows y el binario de Linux del de Linux. Esta acción es la misma en los
-# dos; lo que cambia es dónde se la invoca.
+name: Build the executable
+description: Builds the binary for the host system, the .deb on Linux, and checks the output is usable.
 
 inputs:
-  artefacto:
-    description: Nombre del binario esperado en dist/ (kobun o kobun.exe)
+  artifact:
+    description: Expected binary name in dist/ (kobun or kobun.exe)
     required: true
-  tamano-minimo-mb:
-    description: Un binario más chico que esto significa que algo no se empaquetó
+  minimum-size-mb:
+    description: A binary smaller than this means something was left out of the bundle
     required: false
     default: "40"
 
 runs:
   using: composite
   steps:
-    - name: Construir
+    - name: Build
       shell: bash
       run: python scripts/build_app.py
 
-    - name: Empaquetar .deb
-      # Un binario suelto no alcanza en Linux: los exploradores ya no lanzan
-      # ejecutables con doble clic, así que hace falta instalarlo con su entrada
-      # .desktop para que aparezca en el menú de aplicaciones.
+    - name: Package the .deb
       if: runner.os == 'Linux'
       shell: bash
       run: python scripts/build_deb.py
 
-    - name: Comprobar que la salida existe y tiene tamaño razonable
-      # Que la construcción termine bien no significa que el binario sirva: un
-      # módulo de Qt excluido de más sólo falla al arrancar.
+    - name: Check the output exists and has a sane size
       shell: python
       run: |
         import sys
         from pathlib import Path
 
-        binario = Path("dist") / "${{ inputs.artefacto }}"
-        if not binario.is_file():
-            sys.exit(f"No se generó {binario}")
+        binary = Path("dist") / "${{ inputs.artifact }}"
+        if not binary.is_file():
+            sys.exit(f"{binary} was not produced")
 
-        mb = binario.stat().st_size / 1024 / 1024
-        print(f"{binario}: {mb:.0f} MB")
+        mb = binary.stat().st_size / 1024 / 1024
+        print(f"{binary}: {mb:.0f} MB")
 
-        if mb < ${{ inputs.tamano-minimo-mb }}:
-            sys.exit(f"Sospechosamente chico ({mb:.0f} MB): faltan dependencias")
+        if mb < ${{ inputs.minimum-size-mb }}:
+            sys.exit(f"Suspiciously small ({mb:.0f} MB): dependencies are missing")

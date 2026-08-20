@@ -1,22 +1,18 @@
-name: Entorno de Python con Qt
-description: Prepara Python, las librerías de sistema que Qt necesita y el proyecto instalado.
-
-# Estaba repetido en los tres jobs que existían. Al ser un único lugar, agregar
-# una librería de sistema deja de ser "acordarse de tocar tres archivos".
+name: Python environment with Qt
+description: Sets up Python, the system libraries Qt links against, and the project itself.
 
 inputs:
   python-version:
-    description: Versión de Python
+    description: Python version
     required: false
     default: "3.12"
   extras:
-    description: Extra de pip a instalar (dev, build o release)
+    description: pip extra to install (dev, build or release)
     required: true
-  qt-para-ejecutar:
+  qt-runtime:
     description: >
-      Instala además las librerías que Qt necesita para levantar una ventana.
-      Sólo hacen falta donde se ejecuta la interfaz —los tests—; construir el
-      binario no las usa, y sumarlas cambiaría lo que PyInstaller empaqueta.
+      Also install the libraries Qt needs to open a window. Only the tests need
+      them; adding them to a build job would change what PyInstaller bundles.
     required: false
     default: "false"
 
@@ -28,9 +24,7 @@ runs:
         python-version: ${{ inputs.python-version }}
         cache: pip
 
-    # PySide6 trae sus propias librerías de Qt pero enlaza contra estas, que no
-    # vienen en el runner. Sin ellas ni siquiera se puede importar.
-    - name: Librerías de sistema para Qt
+    - name: System libraries for Qt
       if: runner.os == 'Linux'
       shell: bash
       run: |
@@ -38,16 +32,13 @@ runs:
         sudo apt-get install -y --no-install-recommends \
           libegl1 libgl1 libxkbcommon-x11-0 libdbus-1-3
 
-    - name: Librerías para levantar la interfaz
-      if: runner.os == 'Linux' && inputs.qt-para-ejecutar == 'true'
+    - name: Libraries to run the interface
+      if: runner.os == 'Linux' && inputs.qt-runtime == 'true'
       shell: bash
       run: |
         sudo apt-get install -y --no-install-recommends \
           libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-shape0
 
-    - name: Instalar el proyecto
-      # En modo editable, igual que la configuración verificada en local: la
-      # receta de PyInstaller compensa con `pathex` el hecho de que no puede
-      # seguir el hook de setuptools.
+    - name: Install the project
       shell: bash
       run: pip install -e ".[${{ inputs.extras }}]"
