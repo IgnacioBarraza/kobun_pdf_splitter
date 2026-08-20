@@ -1,50 +1,50 @@
 """
-El generador de notas vive en scripts/, que no es un paquete: se carga por ruta
-para poder probar la clasificación, que es donde puede equivocarse.
+The notes generator lives in scripts/, which is not a package: it is loaded by
+path so the classification —where it can get things wrong— can be tested.
 """
 import importlib.util
 from pathlib import Path
 
 import pytest
 
-RAIZ = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[3]
 
 
-def _cargar_modulo():
-    ruta = RAIZ / "scripts" / "release_notes.py"
-    spec = importlib.util.spec_from_file_location("release_notes", ruta)
-    modulo = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(modulo)
+def _load_module():
+    path = ROOT / "scripts" / "release_notes.py"
+    spec = importlib.util.spec_from_file_location("release_notes", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
 
-    return modulo
-
-
-notas = _cargar_modulo()
+    return module
 
 
-def commit(asunto: str, hash_corto: str = "abc1234"):
-    return notas.parse(hash_corto, asunto)
+notes = _load_module()
+
+
+def commit(subject: str, short_hash: str = "abc1234"):
+    return notes.parse(short_hash, subject)
 
 
 # =========================
-# Parseo
+# Parsing
 # =========================
 
 
 def test_parses_type_and_description():
-    resultado = commit("feat: agrega selector de temas")
+    result = commit("feat: agrega selector de temas")
 
-    assert resultado.type == "feat"
-    assert resultado.text == "agrega selector de temas"
-    assert resultado.scope is None
-    assert not resultado.breaking
+    assert result.type == "feat"
+    assert result.text == "agrega selector de temas"
+    assert result.scope is None
+    assert not result.breaking
 
 
 def test_parses_scope():
-    resultado = commit("fix(ui): corrige el fondo del QLabel")
+    result = commit("fix(ui): corrige el fondo del QLabel")
 
-    assert resultado.scope == "ui"
-    assert resultado.text == "corrige el fondo del QLabel"
+    assert result.scope == "ui"
+    assert result.text == "corrige el fondo del QLabel"
 
 
 def test_parses_breaking_marker():
@@ -52,24 +52,24 @@ def test_parses_breaking_marker():
 
 
 def test_uppercase_type_is_normalised():
-    """`Refactor:` y `refactor:` son el mismo tipo para quien lee las notas."""
+    """`Refactor:` and `refactor:` are the same type to whoever reads the notes."""
     assert commit("Refactor: mueve AppTheme a shared").type == "refactor"
 
 
 def test_commit_without_convention_keeps_its_subject():
-    resultado = commit("Update README.md")
+    result = commit("Update README.md")
 
-    assert resultado.type == notas.NO_TYPE
-    assert resultado.text == "Update README.md"
+    assert result.type == notes.NO_TYPE
+    assert result.text == "Update README.md"
 
 
 # =========================
-# Clasificación
+# Classification
 # =========================
 
 
 def test_sections_follow_the_declared_order():
-    cuerpo = notas.build_notes(
+    body = notes.build_notes(
         [
             commit("chore: sube pytest"),
             commit("fix: corrige el rango"),
@@ -79,148 +79,148 @@ def test_sections_follow_the_declared_order():
         previous="v0.1.0",
     )
 
-    assert cuerpo.index("### New") < cuerpo.index("### Fixes") < cuerpo.index("Internal")
+    assert body.index("### New") < body.index("### Fixes") < body.index("Internal")
 
 
 def test_breaking_goes_first_and_is_not_repeated_in_its_type():
-    cuerpo = notas.build_notes(
+    body = notes.build_notes(
         [commit("feat!: cambia el formato del historial"), commit("feat: agrega el .deb")],
         tag="v0.2.0",
         previous="v0.1.0",
     )
 
-    assert cuerpo.index(notas.BREAKING_TITLE) < cuerpo.index("### New")
-    assert cuerpo.count("cambia el formato del historial") == 1
+    assert body.index(notes.BREAKING_TITLE) < body.index("### New")
+    assert body.count("cambia el formato del historial") == 1
 
 
 def test_unknown_type_does_not_disappear():
     """
-    Un tipo que no está en ninguna sección igual es un cambio: se publica en
-    "Other changes" antes que quedar fuera de las notas sin que nadie lo note.
+    A type in no section is still a change: it gets published under "Other
+    changes" rather than dropping out of the notes unnoticed.
     """
-    cuerpo = notas.build_notes([commit("wip: algo a medio hacer")], tag="v0.2.0", previous="v0.1.0")
+    body = notes.build_notes([commit("wip: algo a medio hacer")], tag="v0.2.0", previous="v0.1.0")
 
-    assert "### Other changes" in cuerpo
-    assert "algo a medio hacer" in cuerpo
+    assert "### Other changes" in body
+    assert "algo a medio hacer" in body
 
 
 def test_internal_changes_are_folded():
-    cuerpo = notas.build_notes(
+    body = notes.build_notes(
         [commit("refactor: separa el resolvedor"), commit("ci: agrega la matriz")],
         tag="v0.2.0",
         previous="v0.1.0",
     )
 
-    assert "<details>" in cuerpo
-    assert "<summary>Internal (2)</summary>" in cuerpo
+    assert "<details>" in body
+    assert "<summary>Internal (2)</summary>" in body
 
 
 def test_does_not_repeat_the_same_change():
-    """Los rebases y cherry-picks duplican asuntos; en las notas se leen mal."""
-    cuerpo = notas.build_notes(
+    """Rebases and cherry-picks duplicate subjects; in the notes they read badly."""
+    body = notes.build_notes(
         [commit("feat: agrega el .deb", "aaa1111"), commit("feat: agrega el .deb", "bbb2222")],
         tag="v0.2.0",
         previous="v0.1.0",
     )
 
-    assert cuerpo.count("agrega el .deb") == 1
+    assert body.count("agrega el .deb") == 1
 
 
 def test_scope_is_highlighted_and_the_hash_follows():
-    cuerpo = notas.build_notes(
+    body = notes.build_notes(
         [commit("fix(ui): corrige el fondo", "abc1234")], tag="v0.2.0", previous="v0.1.0"
     )
 
-    assert "- **ui**: corrige el fondo (abc1234)" in cuerpo
+    assert "- **ui**: corrige el fondo (abc1234)" in body
 
 
 # =========================
-# Documento completo
+# Whole document
 # =========================
 
 
 def test_includes_the_install_instructions():
-    cuerpo = notas.build_notes([commit("feat: algo")], tag="v0.2.0", previous="v0.1.0")
+    body = notes.build_notes([commit("feat: algo")], tag="v0.2.0", previous="v0.1.0")
 
-    assert "## Install" in cuerpo
-    assert "sudo apt install" in cuerpo
-    assert "kobun.exe" in cuerpo
+    assert "## Install" in body
+    assert "sudo apt install" in body
+    assert "kobun.exe" in body
 
 
 def test_comparison_link_between_tags():
-    cuerpo = notas.build_notes(
+    body = notes.build_notes(
         [commit("feat: algo")], tag="v0.2.0", previous="v0.1.0", slug="IgnacioBarraza/kobun_pdf_splitter"
     )
 
-    assert "compare/v0.1.0...v0.2.0" in cuerpo
+    assert "compare/v0.1.0...v0.2.0" in body
 
 
 def test_first_release_links_to_the_commit_list():
-    cuerpo = notas.build_notes(
+    body = notes.build_notes(
         [commit("feat: algo")], tag="v0.1.0", previous=None, slug="IgnacioBarraza/kobun_pdf_splitter"
     )
 
-    assert "commits/v0.1.0" in cuerpo
-    assert "First published version." in cuerpo
+    assert "commits/v0.1.0" in body
+    assert "First published version." in body
 
 
 def test_no_commits_says_so_instead_of_leaving_the_section_empty():
-    cuerpo = notas.build_notes([], tag="v0.2.0", previous="v0.1.0")
+    body = notes.build_notes([], tag="v0.2.0", previous="v0.1.0")
 
-    assert "No changes recorded since v0.1.0." in cuerpo
+    assert "No changes recorded since v0.1.0." in body
 
 
 # =========================
-# Versiones y prereleases
+# Versions and prereleases
 # =========================
 
 
 def test_the_tag_version_keeps_the_prerelease_suffix():
     """
-    semantic-release escribe el sufijo en el paquete, así que la comparación es
-    exacta: un `0.2.0` de paquete con un tag `v0.2.0-alpha.1` es un error.
+    semantic-release writes the suffix into the package, so the comparison is
+    exact: a package at `0.2.0` with a `v0.2.0-alpha.1` tag is an error.
     """
-    assert notas.version_of_tag("v0.2.0-alpha.1") == "0.2.0-alpha.1"
-    assert notas.version_of_tag("0.2.0") == "0.2.0"
+    assert notes.version_of_tag("v0.2.0-alpha.1") == "0.2.0-alpha.1"
+    assert notes.version_of_tag("0.2.0") == "0.2.0"
 
 
 def test_recognises_prereleases_by_their_suffix():
-    assert notas.is_prerelease("v0.2.0-alpha.1")
-    assert not notas.is_prerelease("v0.2.0")
+    assert notes.is_prerelease("v0.2.0-alpha.1")
+    assert not notes.is_prerelease("v0.2.0")
 
 
 def test_the_release_commit_is_not_a_change():
     """
-    `chore(release): v0.2.0` lo escribe semantic-release al versionar; listarlo
-    haría que cada release contara su propia publicación como novedad.
+    `chore(release): v0.2.0` is written by semantic-release when versioning;
+    listing it would make every release count its own publication as news.
     """
-    assert notas.is_release_commit(commit("chore(release): v0.2.0 [skip ci]"))
-    assert not notas.is_release_commit(commit("chore: sube pytest"))
+    assert notes.is_release_commit(commit("chore(release): v0.2.0 [skip ci]"))
+    assert not notes.is_release_commit(commit("chore: sube pytest"))
 
 
 def test_a_prerelease_warns_before_the_install_block():
-    cuerpo = notas.build_notes([commit("feat: algo")], tag="v0.2.0-alpha.1", previous="v0.1.0")
+    body = notes.build_notes([commit("feat: algo")], tag="v0.2.0-alpha.1", previous="v0.1.0")
 
-    assert cuerpo.index("Test build") < cuerpo.index("## Install")
+    assert body.index("Test build") < body.index("## Install")
 
 
 def test_a_definitive_version_carries_no_warning():
-    cuerpo = notas.build_notes([commit("feat: algo")], tag="v0.2.0", previous="v0.1.0")
+    body = notes.build_notes([commit("feat: algo")], tag="v0.2.0", previous="v0.1.0")
 
-    assert "Test build" not in cuerpo
+    assert "Test build" not in body
 
 
 def test_the_tag_has_to_match_the_package_version():
     """
-    La versión se muestra dentro de la app: si el tag y el paquete no coinciden,
-    lo descargado miente sobre qué versión es.
+    The version is shown inside the app: if tag and package disagree, what was
+    downloaded lies about which version it is.
     """
-    notas.check_version(f"v{notas.package_version()}")
+    notes.check_version(f"v{notes.package_version()}")
 
     with pytest.raises(SystemExit, match="does not match"):
-        notas.check_version("v99.0.0")
+        notes.check_version("v99.0.0")
 
 
 def test_a_nonexistent_revision_fails_with_a_message_and_not_a_traceback():
     with pytest.raises(SystemExit, match="does not exist in this repository"):
-        notas.check_revision("v999.no-existe")
+        notes.check_revision("v999.does-not-exist")

@@ -27,24 +27,24 @@ def test_programming_errors_are_not_expected():
 
 
 def test_expected_errors_show_their_own_message():
-    mensaje = "Rango fuera de límites: El PDF tiene 10 páginas."
+    message = "Rango fuera de límites: El PDF tiene 10 páginas."
 
-    assert error_messages.translate(InvalidPageRangeException(mensaje)) == mensaje
+    assert error_messages.translate(InvalidPageRangeException(message)) == message
 
 
 def test_unexpected_errors_show_a_generic_message():
-    """Un traceback en pantalla no le sirve a nadie."""
-    traducido = error_messages.translate(RuntimeError("segfault en el motor"))
+    """A traceback on screen helps nobody."""
+    translated = error_messages.translate(RuntimeError("segfault en el motor"))
 
-    assert traducido == error_messages.UNEXPECTED_ERROR_MESSAGE
-    assert "segfault" not in traducido
+    assert translated == error_messages.UNEXPECTED_ERROR_MESSAGE
+    assert "segfault" not in translated
 
 
 def test_overridden_messages_replace_the_domain_text():
-    traducido = error_messages.translate(EncryptedPdfException("'x.pdf' está protegido."))
+    translated = error_messages.translate(EncryptedPdfException("'x.pdf' está protegido."))
 
-    assert "contraseña" in traducido
-    assert traducido != "'x.pdf' está protegido."
+    assert "contraseña" in translated
+    assert translated != "'x.pdf' está protegido."
 
 
 def test_an_expected_error_without_message_still_says_something():
@@ -52,18 +52,18 @@ def test_an_expected_error_without_message_still_says_something():
 
 
 def test_technical_detail_includes_the_type():
-    detalle = error_messages.technical_detail(RuntimeError("boom"))
+    detail = error_messages.technical_detail(RuntimeError("boom"))
 
-    assert detalle == "RuntimeError: boom"
+    assert detail == "RuntimeError: boom"
 
 
 def test_subclasses_are_treated_as_expected():
-    """PdfNotFoundException hereda de InvalidPdfException."""
+    """PdfNotFoundException inherits from InvalidPdfException."""
     assert error_messages.is_expected(PdfNotFoundException("no está"))
 
 
 # =========================
-# Contenido del diálogo
+# Dialog contents
 # =========================
 
 def test_expected_errors_produce_a_warning_prompt():
@@ -77,7 +77,7 @@ def test_expected_errors_produce_a_warning_prompt():
 
 
 def test_expected_errors_carry_no_technical_detail():
-    """No hay nada técnico que reportar: el usuario puede corregirlo solo."""
+    """There is nothing technical to report: the user can fix it themselves."""
     prompt = error_messages.build_error_prompt(InvalidPageRangeException("Rango inválido"))
 
     assert prompt.detail is None
@@ -95,7 +95,7 @@ def test_unexpected_errors_keep_the_detail_for_reporting():
     prompt = error_messages.build_error_prompt(RuntimeError("segfault en el motor"))
 
     assert prompt.detail == "RuntimeError: segfault en el motor"
-    assert "segfault" not in prompt.message, "El detalle va aparte, no en el mensaje"
+    assert "segfault" not in prompt.message, "El detail va aparte, no en el mensaje"
 
 
 def test_the_prompt_respects_message_overrides():

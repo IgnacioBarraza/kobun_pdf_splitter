@@ -39,7 +39,7 @@ def test_linux_respects_xdg_environment_variables():
 
 
 def test_linux_ignores_relative_xdg_values():
-    """La especificación XDG obliga a descartar valores que no sean absolutos."""
+    """The XDG specification requires discarding values that are not absolute."""
     dirs = build("linux", {"XDG_CONFIG_HOME": "relativo/config"})
 
     assert dirs.config_dir == HOME / ".config" / APP_SLUG
@@ -101,7 +101,7 @@ def test_macos_ignores_xdg_variables():
 
 
 # =========================
-# Comportamiento común
+# Shared behaviour
 # =========================
 
 def test_file_helpers_join_the_right_directory():
@@ -114,18 +114,18 @@ def test_file_helpers_join_the_right_directory():
 def test_reading_a_directory_property_does_not_touch_disk(tmp_path):
     dirs = build("linux", home=tmp_path)
 
-    ruta = dirs.data_dir
+    path = dirs.data_dir
 
-    assert not ruta.exists(), "Consultar la ruta no debe crear nada"
+    assert not path.exists(), "Consultar la ruta no debe crear nada"
 
 
 def test_ensure_creates_the_directory_tree(tmp_path):
     dirs = build("linux", home=tmp_path)
 
-    creado = dirs.ensure_data_dir()
+    created = dirs.ensure_data_dir()
 
-    assert creado.is_dir()
-    assert creado == dirs.data_dir
+    assert created.is_dir()
+    assert created == dirs.data_dir
 
 
 def test_ensure_is_idempotent(tmp_path):
@@ -135,7 +135,7 @@ def test_ensure_is_idempotent(tmp_path):
 
 
 def test_platform_defaults_to_the_running_system():
-    """Sin inyección explícita debe resolver algo utilizable."""
+    """With no explicit injection it must resolve to something usable."""
     dirs = AppDirectories()
 
     assert dirs.data_dir.is_absolute()
@@ -148,8 +148,8 @@ def test_platform_defaults_to_the_running_system():
 
 def test_themes_directory_is_package_relative_and_exists():
     """
-    Regresión: la ventana buscaba los temas en Path("themes"), relativo al
-    directorio de trabajo, así que lanzar la app desde otra carpeta fallaba.
+    Regression: the window looked for themes in Path("themes"), relative to the
+    working directory, so launching the app from another folder failed.
     """
     assert THEMES_DIRECTORY.is_absolute()
     assert THEMES_DIRECTORY.is_dir()

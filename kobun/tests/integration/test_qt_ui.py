@@ -69,8 +69,8 @@ def source_pdf(tmp_path):
 
 class DialogRecorder:
     """
-    Sustituye a los diálogos modales: sin esto, un QMessageBox esperando un
-    clic dejaría la suite colgada esperando que alguien lo cierre.
+    Stands in for the modal dialogs: without this, a QMessageBox waiting for a
+    click would leave the suite hanging until someone closed it.
     """
 
     def __init__(self, answer: bool = True):
@@ -110,7 +110,7 @@ def window(qt_app, tmp_path, dialogs):
         file_storage=file_storage,
     )
 
-    ventana = MainWindow(
+    window = MainWindow(
         view_model,
         ThemeService(preferences, JsonThemeSource()),
         history_repository,
@@ -118,21 +118,21 @@ def window(qt_app, tmp_path, dialogs):
         ask_confirmation=dialogs.ask_confirmation,
     )
 
-    ventana.show()
-    yield ventana
+    window.show()
+    yield window
 
-    ventana.close()
+    window.close()
 
 
 def settle(qt_app) -> None:
     """
-    Espera a que el pool de hilos termine y procesa los eventos pendientes,
-    que es cómo llegan los resultados desde el worker al hilo principal.
+    Waits for the thread pool to finish and processes the pending events,
+    which is how results travel from the worker to the main thread.
 
-    Se procesa varias veces a propósito: `processEvents` no atiende lo que se
-    encola *durante* su propia ejecución, y un slot puede emitir señales que
-    disparan más trabajo. Con una sola pasada los tests aprueban en offscreen
-    pero se vuelven sensibles al timing en un compositor real.
+    Processing several times is deliberate: `processEvents` does not attend to
+    what gets queued *during* its own run, and a slot can emit signals that
+    trigger more work. With a single pass the tests pass offscreen but become
+    timing sensitive on a real compositor.
     """
     QThreadPool.globalInstance().waitForDone(TIMEOUT_MS)
 
@@ -197,7 +197,7 @@ def test_an_encrypted_file_shows_the_overridden_message(window, qt_app, tmp_path
 
 
 # =========================
-# División
+# Splitting
 # =========================
 
 def test_the_suggested_output_appears_when_typing_a_range(window, qt_app, source_pdf):
@@ -242,7 +242,7 @@ def test_a_typed_name_lands_in_the_document_folder(window, qt_app, source_pdf):
 
 
 def test_a_typed_name_without_extension_still_works(window, qt_app, source_pdf):
-    """El campo pide un nombre, no una ruta: exigir ".pdf" sería un error evitable."""
+    """The field asks for a name, not a path: demanding ".pdf" would be an avoidable error."""
     load(window, qt_app, source_pdf)
     window.ui.split_options.input_selection.setText("1-3")
     window.ui.split_options.input_output.setText("capitulo uno")
@@ -273,9 +273,9 @@ def test_splitting_writes_the_file_and_reports_success(window, qt_app, source_pd
 
 def test_the_ui_is_not_blocked_while_working(window, qt_app, source_pdf):
     """
-    El trabajo va al pool: al disparar el split la ventana ya está marcada
-    como ocupada, con el spinner visible y las opciones deshabilitadas,
-    en lugar de haber quedado congelada hasta terminar.
+    The work goes to the pool: by the time the split fires the window is
+    already marked busy, with the spinner visible and the options disabled,
+    instead of having frozen until it finished.
     """
     load(window, qt_app, source_pdf)
     window.ui.split_options.input_selection.setText("1-3")
@@ -292,34 +292,34 @@ def test_the_ui_is_not_blocked_while_working(window, qt_app, source_pdf):
 
 
 def test_an_existing_destination_is_reported_instead_of_overwritten(window, qt_app, source_pdf, tmp_path):
-    ocupado = tmp_path / "ocupado.pdf"
-    ocupado.write_bytes(b"contenido previo")
+    taken = tmp_path / "ocupado.pdf"
+    taken.write_bytes(b"contenido previo")
 
     load(window, qt_app, source_pdf)
     window.ui.split_options.input_selection.setText("1-3")
-    window.ui.split_options.input_output.setText(str(ocupado))
+    window.ui.split_options.input_output.setText(str(taken))
 
     window.ui.btn_process.click()
     settle(qt_app)
 
     assert "ya existe" in window.ui.label_status.text()
-    assert ocupado.read_bytes() == b"contenido previo"
+    assert taken.read_bytes() == b"contenido previo"
 
 
 def test_the_rename_policy_can_be_chosen_from_the_ui(window, qt_app, source_pdf, tmp_path):
-    ocupado = tmp_path / "ocupado.pdf"
-    ocupado.write_bytes(b"contenido previo")
+    taken = tmp_path / "ocupado.pdf"
+    taken.write_bytes(b"contenido previo")
 
     load(window, qt_app, source_pdf)
     window.ui.split_options.input_selection.setText("1-3")
-    window.ui.split_options.set_destination(ocupado)
+    window.ui.split_options.set_destination(taken)
     window.ui.split_options.set_policy(OverwritePolicy.RENAME)
 
     window.ui.btn_process.click()
     settle(qt_app)
 
     assert (tmp_path / "ocupado_1.pdf").exists()
-    assert ocupado.read_bytes() == b"contenido previo"
+    assert taken.read_bytes() == b"contenido previo"
 
 
 # =========================
@@ -342,11 +342,11 @@ def test_the_history_row_shows_only_the_generated_file(window, qt_app, source_pd
     window.ui.btn_process.click()
     settle(qt_app)
 
-    texto = window.ui.list_history.item(0).text()
+    text = window.ui.list_history.item(0).text()
 
-    assert "libro_2-4.pdf" in texto
-    assert "->" not in texto, "El origen y la flecha ensuciaban la fila"
-    assert "[2-4]" not in texto
+    assert "libro_2-4.pdf" in text
+    assert "->" not in text, "El origen y la flecha ensuciaban la fila"
+    assert "[2-4]" not in text
 
 
 def test_the_history_tooltip_keeps_the_full_detail(window, qt_app, source_pdf):
@@ -404,30 +404,30 @@ def test_the_selector_lists_every_shipped_theme(window):
 
 
 def test_the_selector_separates_light_from_dark(window):
-    """Con nueve paletas, una lista corrida es difícil de leer."""
+    """With nine palettes, one unbroken list is hard to read."""
     combo = window.ui.combo_theme
-    filas = [combo.itemData(i) for i in range(combo.count())]
+    rows = [combo.itemData(i) for i in range(combo.count())]
 
-    assert combo.count() == len(AVAILABLE_THEMES) + 1, "falta el separador"
-    assert filas.count(None) == 1
+    assert combo.count() == len(AVAILABLE_THEMES) + 1, "the separator is missing"
+    assert rows.count(None) == 1
 
-    corte = filas.index(None)
-    antes = [n for n in filas[:corte]]
-    despues = [n for n in filas[corte + 1:]]
+    cut = rows.index(None)
+    before = [n for n in rows[:cut]]
+    after = [n for n in rows[cut + 1:]]
 
-    assert all(not JsonThemeSource().load(n).is_dark for n in antes)
-    assert all(JsonThemeSource().load(n).is_dark for n in despues)
+    assert all(not JsonThemeSource().load(n).is_dark for n in before)
+    assert all(JsonThemeSource().load(n).is_dark for n in after)
 
 
 def test_the_separator_cannot_be_chosen_as_a_theme(window):
     """Un separador no tiene nombre de tema; elegirlo no debe romper nada."""
     combo = window.ui.combo_theme
-    corte = [combo.itemData(i) for i in range(combo.count())].index(None)
-    antes = window.styleSheet()
+    separator_index = [combo.itemData(i) for i in range(combo.count())].index(None)
+    before = window.styleSheet()
 
-    window._on_theme_chosen(corte)
+    window._on_theme_chosen(separator_index)
 
-    assert window.styleSheet() == antes
+    assert window.styleSheet() == before
 
 
 def test_the_selector_shows_readable_labels(window):
@@ -457,11 +457,11 @@ def test_the_selector_starts_on_the_active_theme(window):
 
 def test_choosing_a_theme_repaints_the_window(window):
     combo = window.ui.combo_theme
-    antes = window.styleSheet()
+    before = window.styleSheet()
 
     combo.setCurrentIndex(combo.findData("sumi"))
 
-    assert window.styleSheet() != antes
+    assert window.styleSheet() != before
 
 
 @pytest.mark.parametrize("name", AVAILABLE_THEMES)
@@ -475,10 +475,10 @@ def test_every_theme_produces_a_stylesheet(window, name):
 
 def test_building_the_selector_does_not_save_a_preference(qt_app, tmp_path, dialogs):
     """
-    Al armar el combo, setCurrentIndex emitiría el cambio y guardaría una
-    preferencia que el usuario nunca eligió.
+    While building the combo, setCurrentIndex would emit the change and save a
+    preference the user never chose.
     """
-    from kobun.presentation.qt.windows.main_window import MainWindow as Ventana
+    from kobun.presentation.qt.windows.main_window import MainWindow as Window
 
     prefs_path = tmp_path / "prefs.json"
     file_storage = LocalFileStorage()
@@ -495,7 +495,7 @@ def test_building_the_selector_does_not_save_a_preference(qt_app, tmp_path, dial
         list_history_use_case=ListHistoryUseCase(history_repository, file_storage),
         file_storage=file_storage,
     )
-    ventana = Ventana(
+    window = Window(
         view_model,
         ThemeService(JsonPreferencesRepository(prefs_path), JsonThemeSource()),
         history_repository,
@@ -506,7 +506,7 @@ def test_building_the_selector_does_not_save_a_preference(qt_app, tmp_path, dial
     try:
         assert not prefs_path.exists(), "Abrir la ventana no debe escribir preferencias"
     finally:
-        ventana.close()
+        window.close()
 
 
 def test_the_chosen_theme_survives_a_new_window(qt_app, tmp_path):
@@ -527,48 +527,49 @@ def test_the_chosen_theme_survives_a_new_window(qt_app, tmp_path):
 # =========================
 
 def test_the_window_has_an_icon(window):
-    icono = window.windowIcon()
+    icon = window.windowIcon()
 
-    assert not icono.isNull(), "la ventana quedaría con el icono genérico de Qt"
+    assert not icon.isNull(), "the window would be left with Qt's generic icon"
 
 
 def test_the_icon_carries_every_declared_size(window):
     from kobun.shared.config.app_settings import APP_ICON_SIZES
 
-    disponibles = {tamano.width() for tamano in window.windowIcon().availableSizes()}
+    available = {size.width() for size in window.windowIcon().availableSizes()}
 
-    assert disponibles == set(APP_ICON_SIZES)
+    assert available == set(APP_ICON_SIZES)
 
 
 def test_the_icon_renders_at_small_sizes_without_being_empty(window):
     """
-    Qt devuelve un pixmap vacío si el archivo existe pero no se pudo decodificar.
+    Qt returns an empty pixmap if the file exists but could not be decoded.
     """
-    for lado in (16, 32, 48):
-        pixmap = window.windowIcon().pixmap(lado, lado)
+    for side in (16, 32, 48):
+        pixmap = window.windowIcon().pixmap(side, side)
 
         assert not pixmap.isNull()
-        assert pixmap.width() == lado
+        assert pixmap.width() == side
 
 
 def test_the_icon_keeps_its_transparent_corners(window):
     """
-    Regresión del marco negro: la esquina del pixmap debe ser transparente,
-    no negra.
+    Regression of the black frame: the pixmap's corner has to be transparent,
+    not black.
     """
-    imagen = window.windowIcon().pixmap(64, 64).toImage()
+    image = window.windowIcon().pixmap(64, 64).toImage()
 
-    assert imagen.pixelColor(0, 0).alpha() == 0, "la esquina no es transparente"
-    assert imagen.pixelColor(32, 32).alpha() == 255, "el centro debería ser opaco"
+    assert image.pixelColor(0, 0).alpha() == 0, "the corner is not transparent"
+    assert image.pixelColor(32, 32).alpha() == 255, "the centre should be opaque"
 
 
 # =========================
-# Apertura desde afuera de la ventana
+# Opening from outside the window
 # =========================
 
 def test_open_document_loads_a_pdf_from_outside(window, qt_app, source_pdf):
     """
-    Es el camino del "Abrir con" del explorador y de la línea de comandos.
+    This is the path taken by the file manager's "Open with" and the command
+    line.
     """
     window.open_document(source_pdf)
     settle(qt_app)
@@ -578,7 +579,7 @@ def test_open_document_loads_a_pdf_from_outside(window, qt_app, source_pdf):
 
 
 def test_open_document_switches_to_the_split_page(window, qt_app, source_pdf):
-    """Si la app arranca en el historial, el archivo abierto no se vería."""
+    """If the app starts on the history page, the opened file would not show."""
     window.ui.btn_history.click()
     settle(qt_app)
 
@@ -643,7 +644,7 @@ def test_forget_does_not_delete_the_pdf(window, qt_app, source_pdf):
 
 
 def test_forget_asks_no_confirmation(window, qt_app, dialogs, source_pdf):
-    """Sólo lo irreversible pregunta; si todo pregunta, nadie lee."""
+    """Only the irreversible asks; if everything asks, nobody reads."""
     export(window, qt_app, source_pdf, "2-4")
     window.ui.btn_history.click()
     settle(qt_app)
@@ -656,8 +657,8 @@ def test_forget_asks_no_confirmation(window, qt_app, dialogs, source_pdf):
 
 def test_forget_is_available_for_dead_entries_but_open_is_not(window, qt_app, source_pdf):
     """
-    Es justamente el caso que motivó el botón: un archivo que ya no está y que
-    antes sólo se podía sacar borrando todo el historial.
+    This is precisely the case that motivated the button: a file that is gone
+    and that previously could only be removed by clearing the whole history.
     """
     export(window, qt_app, source_pdf, "2-4")
     (source_pdf.parent / "libro_2-4.pdf").unlink()
@@ -685,7 +686,7 @@ def test_forget_is_disabled_without_a_selection(window, qt_app, source_pdf):
 
 
 def test_forgetting_survives_a_reload(window, qt_app, source_pdf):
-    """La eliminación se persiste, no sólo se quita de la lista en pantalla."""
+    """The removal is persisted, not just taken off the list on screen."""
     export(window, qt_app, source_pdf, "2-4")
     window.ui.btn_history.click()
     settle(qt_app)
@@ -700,13 +701,13 @@ def test_forgetting_survives_a_reload(window, qt_app, source_pdf):
 
 
 # =========================
-# Versión visible
+# Visible version
 # =========================
 
 def test_the_window_shows_the_package_version(window):
     """
-    Con la versión a la vista, el archivo descargado puede llamarse sólo
-    "kobun" sin perder la forma de saber qué versión se está usando.
+    With the version in plain sight, the downloaded file can simply be called
+    "kobun" without losing the ability to tell which version is running.
     """
     import kobun
 

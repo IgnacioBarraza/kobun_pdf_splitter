@@ -15,7 +15,7 @@ from kobun.domain.pdf.value_objects.pdf_metadata import PdfMetadata
 
 
 class StubPdfRepository(PdfRepository):
-    """Devuelve un documento fijo, o lanza la excepción que se le indique."""
+    """Returns a fixed document, or raises whichever exception it is given."""
 
     def __init__(self, document: PdfDocument = None, error: Exception = None):
         self._document = document
@@ -89,8 +89,8 @@ def test_propagates_encrypted():
 
 def test_load_errors_share_a_single_base_exception():
     """
-    La UI necesita un solo `except` para todos los fallos de carga; los casos
-    específicos existen sólo para dar mejores mensajes.
+    The UI needs a single `except` for every loading failure; the specific
+    cases exist only to give better messages.
     """
     assert issubclass(PdfNotFoundException, InvalidPdfException)
     assert issubclass(EncryptedPdfException, InvalidPdfException)

@@ -13,12 +13,12 @@ def storage():
 
 
 def test_exists_and_type_predicates(storage, tmp_path):
-    archivo = tmp_path / "a.pdf"
-    archivo.write_bytes(b"x")
+    file = tmp_path / "a.pdf"
+    file.write_bytes(b"x")
 
-    assert storage.exists(archivo)
-    assert storage.is_file(archivo)
-    assert not storage.is_directory(archivo)
+    assert storage.exists(file)
+    assert storage.is_file(file)
+    assert not storage.is_directory(file)
 
     assert storage.is_directory(tmp_path)
     assert not storage.is_file(tmp_path)
@@ -26,11 +26,11 @@ def test_exists_and_type_predicates(storage, tmp_path):
 
 
 def test_is_same_file_for_existing_paths(storage, tmp_path):
-    archivo = tmp_path / "a.pdf"
-    archivo.write_bytes(b"x")
+    file = tmp_path / "a.pdf"
+    file.write_bytes(b"x")
 
-    assert storage.is_same_file(archivo, tmp_path / "sub" / ".." / "a.pdf")
-    assert not storage.is_same_file(archivo, tmp_path / "b.pdf")
+    assert storage.is_same_file(file, tmp_path / "sub" / ".." / "a.pdf")
+    assert not storage.is_same_file(file, tmp_path / "b.pdf")
 
 
 def test_is_same_file_for_paths_that_do_not_exist(storage, tmp_path):
@@ -52,14 +52,14 @@ def test_ensure_writable_directory_accepts_a_normal_directory(storage, tmp_path)
 
 
 def test_ensure_writable_directory_rejects_missing_and_non_directory(storage, tmp_path):
-    archivo = tmp_path / "a.pdf"
-    archivo.write_bytes(b"x")
+    file = tmp_path / "a.pdf"
+    file.write_bytes(b"x")
 
     with pytest.raises(InvalidOutputPathException, match="no existe"):
         storage.ensure_writable_directory(tmp_path / "fantasma")
 
     with pytest.raises(InvalidOutputPathException, match="no es un directorio"):
-        storage.ensure_writable_directory(archivo)
+        storage.ensure_writable_directory(file)
 
 
 def test_unique_path_returns_the_same_path_when_free(storage, tmp_path):
@@ -81,10 +81,10 @@ def test_unique_path_preserves_suffix_and_parent(storage, tmp_path):
     sub.mkdir()
     (sub / "book_1-5.pdf").write_bytes(b"x")
 
-    resultado = storage.unique_path(sub / "book_1-5.pdf")
+    result = storage.unique_path(sub / "book_1-5.pdf")
 
-    assert resultado.parent == sub
-    assert resultado.name == "book_1-5_1.pdf"
+    assert result.parent == sub
+    assert result.name == "book_1-5_1.pdf"
 
 
 # =========================
@@ -105,36 +105,36 @@ class SpawnRecorder:
 
 
 @pytest.fixture
-def archivo(tmp_path):
-    ruta = tmp_path / "export.pdf"
-    ruta.write_bytes(b"%PDF")
-    return ruta
+def file(tmp_path):
+    path = tmp_path / "export.pdf"
+    path.write_bytes(b"%PDF")
+    return path
 
 
-def test_linux_uses_xdg_open(archivo):
+def test_linux_uses_xdg_open(file):
     recorder = SpawnRecorder()
 
-    LocalFileStorage(platform="linux", spawn=recorder).open_in_default_app(archivo)
+    LocalFileStorage(platform="linux", spawn=recorder).open_in_default_app(file)
 
-    assert recorder.commands == [["xdg-open", str(archivo)]]
+    assert recorder.commands == [["xdg-open", str(file)]]
 
 
-def test_macos_uses_open(archivo):
+def test_macos_uses_open(file):
     recorder = SpawnRecorder()
 
-    LocalFileStorage(platform="darwin", spawn=recorder).open_in_default_app(archivo)
+    LocalFileStorage(platform="darwin", spawn=recorder).open_in_default_app(file)
 
-    assert recorder.commands == [["open", str(archivo)]]
+    assert recorder.commands == [["open", str(file)]]
 
 
-def test_windows_uses_the_system_api_not_a_command(archivo, monkeypatch):
+def test_windows_uses_the_system_api_not_a_command(file, monkeypatch):
     llamadas = []
     monkeypatch.setattr(os, "startfile", llamadas.append, raising=False)
     recorder = SpawnRecorder()
 
-    LocalFileStorage(platform="win32", spawn=recorder).open_in_default_app(archivo)
+    LocalFileStorage(platform="win32", spawn=recorder).open_in_default_app(file)
 
-    assert llamadas == [str(archivo)]
+    assert llamadas == [str(file)]
     assert recorder.commands == [], "Windows no debe pasar por subprocess"
 
 
@@ -149,39 +149,39 @@ def test_missing_file_is_reported_before_launching_anything(tmp_path):
 
 
 def test_a_directory_cannot_be_opened_as_a_file(tmp_path):
-    carpeta = tmp_path / "carpeta.pdf"
-    carpeta.mkdir()
+    folder = tmp_path / "carpeta.pdf"
+    folder.mkdir()
 
     with pytest.raises(FileOpenException, match="ya no está disponible"):
-        LocalFileStorage(platform="linux", spawn=SpawnRecorder()).open_in_default_app(carpeta)
+        LocalFileStorage(platform="linux", spawn=SpawnRecorder()).open_in_default_app(folder)
 
 
-def test_a_missing_opener_becomes_a_domain_exception(archivo):
-    """Un sistema sin xdg-open instalado no debe reventar con FileNotFoundError."""
+def test_a_missing_opener_becomes_a_domain_exception(file):
+    """A system without xdg-open installed must not blow up with FileNotFoundError."""
     recorder = SpawnRecorder(error=FileNotFoundError("xdg-open"))
     storage = LocalFileStorage(platform="linux", spawn=recorder)
 
     with pytest.raises(FileOpenException, match="No se pudo abrir 'export.pdf'"):
-        storage.open_in_default_app(archivo)
+        storage.open_in_default_app(file)
 
 
-def test_the_original_error_is_preserved_as_cause(archivo):
+def test_the_original_error_is_preserved_as_cause(file):
     original = OSError("permiso denegado")
     storage = LocalFileStorage(platform="linux", spawn=SpawnRecorder(error=original))
 
     with pytest.raises(FileOpenException) as error:
-        storage.open_in_default_app(archivo)
+        storage.open_in_default_app(file)
 
     assert error.value.__cause__ is original
 
 
-def test_open_command_is_inspectable_without_launching(archivo):
-    assert LocalFileStorage(platform="linux").open_command(archivo) == ["xdg-open", str(archivo)]
-    assert LocalFileStorage(platform="darwin").open_command(archivo) == ["open", str(archivo)]
+def test_open_command_is_inspectable_without_launching(file):
+    assert LocalFileStorage(platform="linux").open_command(file) == ["xdg-open", str(file)]
+    assert LocalFileStorage(platform="darwin").open_command(file) == ["open", str(file)]
 
 
 def test_default_construction_still_works():
-    """El resto del código construye LocalFileStorage() sin argumentos."""
+    """The rest of the code builds LocalFileStorage() with no arguments."""
     storage = LocalFileStorage()
 
     assert isinstance(storage.is_windows, bool)
