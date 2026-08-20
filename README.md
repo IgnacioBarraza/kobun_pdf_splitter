@@ -198,10 +198,10 @@ of every library in the Qt bundle and mapping what is missing to packages.
 
 ### Getting the Windows `.exe` without a Windows machine
 
-[`.github/workflows/build.yml`](.github/workflows/build.yml) runs the test suite,
-then builds both binaries on their own runners and uploads them as artifacts.
-Merging into `develop` or `main` also publishes them as a release — see
-[Publishing a release](#publishing-a-release).
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs the test suite, then
+builds both binaries on their own runners and uploads them as artifacts, so you
+can try a branch's build without releasing anything. Merging into `develop` or
+`main` publishes them instead — see [Publishing a release](#publishing-a-release).
 
 ### Windows installer
 
@@ -222,6 +222,26 @@ already installed.
 Note that an unsigned executable downloaded from the internet triggers a
 SmartScreen warning on first run. Removing it requires a code-signing
 certificate.
+
+### What CI is made of
+
+Split by responsibility, so that a change to one concern touches one file:
+
+| File | Responsibility |
+|---|---|
+| [`workflows/ci.yml`](.github/workflows/ci.yml) | is the code healthy? Tests + a build that proves the binary still comes out |
+| [`workflows/release.yml`](.github/workflows/release.yml) | publish: version, changelog, release, binaries attached |
+| [`workflows/tests.yml`](.github/workflows/tests.yml) | the suite itself, called by both — one definition, so what runs before a release is what ran on the PR |
+| [`actions/python-env`](.github/actions/python-env/action.yml) | Python, Qt's system libraries, the project installed |
+| [`actions/build-app`](.github/actions/build-app/action.yml) | the binary, the `.deb`, and the size check that catches a build missing its dependencies |
+
+Pushes to `main` and `develop` are deliberately excluded from `ci.yml`:
+`release.yml` calls the same test suite before versioning, so including them
+would run everything twice per merge.
+
+The two composite actions exist because their steps were repeated across jobs —
+installing Qt's libraries appeared three times, building appeared twice. Adding
+a system library is now one edit rather than a hunt.
 
 ### Publishing a release
 
@@ -263,6 +283,34 @@ pip install -e .[release]
 semantic-release version --print          # the next version, or the current one if none
 python3 scripts/release_notes.py v0.2.0   # the release body, once the tag exists
 ```
+
+#### The release bot
+
+The release commit lands on a protected branch, and `GITHUB_TOKEN` cannot push
+there — a ruleset only exempts named actors. So the versioning job authenticates
+as a GitHub App, **kobun-release-bot**, which the ruleset lists as a bypass
+actor. [`actions/create-github-app-token`](https://github.com/actions/create-github-app-token)
+exchanges the app's private key for an installation token that lives for an hour.
+
+What the repository has to provide:
+
+| Where | Name | What it is |
+|---|---|---|
+| Variable | `APP_ID` | the App's numeric ID |
+| Secret | `APP_PRIVATE_KEY` | the `.pem` private key, whole file including the BEGIN/END lines |
+
+The App needs **Contents: Read and write** (pushing, tagging and creating
+releases all live under that permission), has to be installed on this
+repository, and has to appear in the bypass list of the branch ruleset.
+
+One consequence worth knowing: a push made with `GITHUB_TOKEN` never triggers
+workflows, but **a push made with an App token does**. The release commit would
+therefore start another run of this same workflow. Two things prevent the loop —
+the `[skip ci]` that `commit_message` puts in the commit, and the
+`github.actor != 'kobun-release-bot[bot]'` guard on the job.
+
+Uploading the binaries does not need the App: attaching an asset to a release
+touches no branch, so the ruleset never sees it and `GITHUB_TOKEN` is enough.
 
 #### Two documents, on purpose
 

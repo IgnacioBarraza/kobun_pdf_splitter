@@ -75,7 +75,13 @@ testpaths = ["kobun/tests"]
 [tool.semantic_release]
 # El mismo archivo que lee setuptools: una sola fuente de verdad para la
 # versión, que además es la que la app muestra en su barra lateral.
-version_variables = ["kobun/__init__.py:__version__"]
+version_variables = [
+    "kobun/__init__.py:__version__",
+    # El instalador de Windows declara su propia versión, y quedarse atrás no se
+    # nota hasta que alguien instala un setup etiquetado con una versión vieja.
+    # El patrón acepta definiciones estilo macro de C, así que #define alcanza.
+    "packaging/kobun.iss:MiVersion",
+]
 tag_format = "v{version}"
 
 # 0.x es una versión válida: sin esto la primera publicación automática saltaría
@@ -92,7 +98,10 @@ build_command = ""
 # El mensaje es conventional a propósito: si más adelante se valida el formato
 # de los commits, el que escribe la propia release no puede ser el que falle.
 commit_message = "chore(release): v{version} [skip ci]"
-commit_author = "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
+# El commit lo empuja la GitHub App kobun-release-bot, que es la que el
+# ruleset de main deja pasar; el número es el id de su usuario bot, y es lo
+# que hace que GitHub le ponga su avatar al commit.
+commit_author = "kobun-release-bot[bot] <318829460+kobun-release-bot[bot]@users.noreply.github.com>"
 
 # main publica versiones definitivas; develop publica prereleases numeradas
 # (0.2.0-alpha.1, .2, …) para poder probar los binarios antes de que salgan.

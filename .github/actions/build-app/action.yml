@@ -1,0 +1,48 @@
+name: Construir el ejecutable
+description: Genera el binario del sistema donde corre, el .deb en Linux, y comprueba que la salida sirva.
+
+# PyInstaller **no compila cruzado**: el .exe de Windows sale del runner de
+# Windows y el binario de Linux del de Linux. Esta acción es la misma en los
+# dos; lo que cambia es dónde se la invoca.
+
+inputs:
+  artefacto:
+    description: Nombre del binario esperado en dist/ (kobun o kobun.exe)
+    required: true
+  tamano-minimo-mb:
+    description: Un binario más chico que esto significa que algo no se empaquetó
+    required: false
+    default: "40"
+
+runs:
+  using: composite
+  steps:
+    - name: Construir
+      shell: bash
+      run: python scripts/build_app.py
+
+    - name: Empaquetar .deb
+      # Un binario suelto no alcanza en Linux: los exploradores ya no lanzan
+      # ejecutables con doble clic, así que hace falta instalarlo con su entrada
+      # .desktop para que aparezca en el menú de aplicaciones.
+      if: runner.os == 'Linux'
+      shell: bash
+      run: python scripts/build_deb.py
+
+    - name: Comprobar que la salida existe y tiene tamaño razonable
+      # Que la construcción termine bien no significa que el binario sirva: un
+      # módulo de Qt excluido de más sólo falla al arrancar.
+      shell: python
+      run: |
+        import sys
+        from pathlib import Path
+
+        binario = Path("dist") / "${{ inputs.artefacto }}"
+        if not binario.is_file():
+            sys.exit(f"No se generó {binario}")
+
+        mb = binario.stat().st_size / 1024 / 1024
+        print(f"{binario}: {mb:.0f} MB")
+
+        if mb < ${{ inputs.tamano-minimo-mb }}:
+            sys.exit(f"Sospechosamente chico ({mb:.0f} MB): faltan dependencias")
