@@ -26,6 +26,10 @@ jobs:
     # corrida; esto es el respaldo si alguien lo saca.
     if: github.actor != 'kobun-release-bot[bot]'
     runs-on: ubuntu-latest
+    # No es decorativo: APP_ID y APP_PRIVATE_KEY viven en este environment, y un
+    # job que no lo declara los ve vacíos. Sin esta línea el paso del token
+    # falla con "appId option is required".
+    environment: KOBUN_RELEASE
     # Una release por vez: dos pushes seguidos correrían dos versionados en
     # paralelo y el segundo intentaría empujar sobre una rama que ya se movió.
     concurrency:

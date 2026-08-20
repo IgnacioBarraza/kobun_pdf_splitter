@@ -292,12 +292,15 @@ as a GitHub App, **kobun-release-bot**, which the ruleset lists as a bypass
 actor. [`actions/create-github-app-token`](https://github.com/actions/create-github-app-token)
 exchanges the app's private key for an installation token that lives for an hour.
 
-What the repository has to provide:
+What the repository has to provide, both scoped to the **`KOBUN_RELEASE`**
+environment — which is why the versioning job declares `environment:
+KOBUN_RELEASE`. A job that does not declare it sees them as empty, and the token
+step fails with `appId option is required`:
 
 | Where | Name | What it is |
 |---|---|---|
-| Variable | `APP_ID` | the App's numeric ID |
-| Secret | `APP_PRIVATE_KEY` | the `.pem` private key, whole file including the BEGIN/END lines |
+| Environment variable | `APP_ID` | the App's numeric ID |
+| Environment secret | `APP_PRIVATE_KEY` | the `.pem` private key, whole file including the BEGIN/END lines |
 
 The App needs **Contents: Read and write** (pushing, tagging and creating
 releases all live under that permission), has to be installed on this
