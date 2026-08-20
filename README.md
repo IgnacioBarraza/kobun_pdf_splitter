@@ -284,6 +284,23 @@ semantic-release version --print          # the next version, or the current one
 python3 scripts/release_notes.py v0.2.0   # the release body, once the tag exists
 ```
 
+#### After a definitive release
+
+A release writes a real commit —the version bump plus the changelog entry— on
+the branch it publishes from. After releasing from `main`, that leaves `main` one
+commit ahead of `develop`, on three files nobody edits by hand
+(`kobun/__init__.py`, `packaging/kobun.iss`, `docs/changelog.md`). Left alone,
+the next `develop` → `main` pull request conflicts on all three, and resolving it
+the wrong way walks the published version backwards.
+
+The `back-merge` job merges `main` into `develop` right after a definitive
+release, so `develop` carries the version it just published and the next pull
+request has nothing to conflict on. It runs only for definitive releases —a
+prerelease publishes from `develop` itself, so there is nothing to bring back—
+and shares the `release` concurrency group so a prerelease cannot interleave
+with the merge. If the merge does conflict, the job fails with the command to
+resolve it by hand rather than forcing anything.
+
 #### The release bot
 
 The release commit lands on a protected branch, and `GITHUB_TOKEN` cannot push
