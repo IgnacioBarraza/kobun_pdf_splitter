@@ -2,6 +2,17 @@
 
 <!-- version list -->
 
+## v0.2.0-alpha.2 (2026-08-20)
+
+### Features
+
+- Declare KOBUN_RELEASE environment for versioning job to ensure token availability
+  ([`36950fd`](https://github.com/IgnacioBarraza/kobun_pdf_splitter/commit/36950fd942b7cfe76ba4c930a98993a8b42cab0f))
+
+- Restructure CI/CD workflows and add composite actions for building and testing
+  ([`eb3abb3`](https://github.com/IgnacioBarraza/kobun_pdf_splitter/commit/eb3abb3d13cd0c65c7b75add0ff7d13b4dbf8faa))
+
+
 ## v0.2.0-alpha.1 (2026-08-19)
 
 ### Features
