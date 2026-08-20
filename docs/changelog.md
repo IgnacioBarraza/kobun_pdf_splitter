@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.3.0-alpha.1 (2026-08-20)
+
+### Features
+
+- **release**: Add back-merge job to synchronize main with develop after definitive releases
+  ([`ebfd81a`](https://github.com/IgnacioBarraza/kobun_pdf_splitter/commit/ebfd81a94da0b568573baf7b6abcc86aeb7f6928))
+
+
 ## v0.2.0 (2026-08-20)
 
 ### Refactoring
