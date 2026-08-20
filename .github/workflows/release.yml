@@ -1,0 +1,120 @@
+name: release
+
+# The version comes from the commits: a push to develop publishes a prerelease
+# (0.2.0-alpha.N), a push to main the definitive one. Configured under
+# [tool.semantic_release] in pyproject.toml.
+on:
+  push:
+    branches: [main, develop]
+
+env:
+  QT_QPA_PLATFORM: offscreen
+
+jobs:
+  tests:
+    uses: ./.github/workflows/tests.yml
+
+  version:
+    name: version
+    needs: tests
+    # An App token push triggers workflows, so the release commit would come back
+    # through here. Backstop for the [skip ci] already in its message.
+    if: github.actor != 'kobun-release-bot[bot]'
+    runs-on: ubuntu-latest
+    # APP_ID and APP_PRIVATE_KEY live here; a job that omits it reads them empty.
+    environment: KOBUN_RELEASE
+    concurrency:
+      group: release
+      cancel-in-progress: false
+    permissions:
+      # The App token does the writing, not GITHUB_TOKEN.
+      contents: read
+    outputs:
+      released: ${{ steps.psr.outputs.released }}
+      version: ${{ steps.psr.outputs.version }}
+      tag: ${{ steps.psr.outputs.tag }}
+    steps:
+      - name: GitHub App token
+        id: app
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ steps.app.outputs.token }}
+
+      - uses: ./.github/actions/python-env
+        with:
+          extras: release
+
+      - name: Version, write the changelog and tag
+        id: psr
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: semantic-release -v version
+
+      - name: Write the release notes
+        # Replaces what semantic-release wrote: install instructions, and every
+        # change since the last definitive version rather than since the last alpha.
+        if: steps.psr.outputs.released == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: |
+          python3 scripts/release_notes.py "${{ steps.psr.outputs.tag }}" --output notes.md
+          gh release edit "${{ steps.psr.outputs.tag }}" --notes-file notes.md
+
+      - name: Summary
+        run: |
+          if [ "${{ steps.psr.outputs.released }}" = "true" ]; then
+            {
+              echo "### ${{ steps.psr.outputs.tag }}"
+              echo "Previous: ${{ steps.psr.outputs.previous_version }}"
+              echo ""
+              cat notes.md
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Nothing to publish: no commit in this push warrants a new version." \
+              >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  binaries:
+    name: binaries ${{ matrix.name }}
+    needs: version
+    if: needs.version.outputs.released == 'true'
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: linux
+            artifact: kobun
+            assets: dist/kobun dist/*.deb
+          - os: windows-latest
+            name: windows
+            artifact: kobun.exe
+            assets: dist/kobun.exe
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.version.outputs.tag }}
+
+      - uses: ./.github/actions/python-env
+        with:
+          extras: build
+
+      - uses: ./.github/actions/build-app
+        with:
+          artifact: ${{ matrix.artifact }}
+
+      - name: Attach to the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ needs.version.outputs.tag }}" ${{ matrix.assets }} --clobber

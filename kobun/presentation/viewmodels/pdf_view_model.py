@@ -17,11 +17,11 @@ from kobun.presentation.qt.workers import Worker
 
 class PdfViewModel(QObject):
     """
-    Estado de la pantalla y puente hacia los use cases.
+    The screen's state and the bridge towards the use cases.
 
-    La ventana no conoce ningún use case: conecta señales de este objeto y
-    llama a sus métodos. Eso deja la lógica de la pantalla testeable sin
-    instanciar widgets.
+    The window knows no use case: it connects this object's signals and calls
+    its methods. That leaves the screen's logic testable without instantiating
+    widgets.
     """
 
     document_loaded = Signal(object)
@@ -56,12 +56,12 @@ class PdfViewModel(QObject):
         self._document: Optional[PdfDocument] = None
         self._busy = False
 
-        # Sin esta referencia los workers pueden ser recolectados antes de
-        # emitir sus señales, y la operación se pierde en silencio.
+        # Without this reference the workers can be collected before emitting
+        # their signals, and the operation is lost silently.
         self._running: Set[Worker] = set()
 
     # =========================
-    # Estado
+    # State
     # =========================
 
     @property
@@ -83,13 +83,13 @@ class PdfViewModel(QObject):
         return self._split_use_case.suggest_output_path(self._document, selection)
 
     # =========================
-    # Acciones
+    # Actions
     # =========================
 
     def load_document(self, file_path: Path) -> None:
         """
-        Abre un PDF fuera del hilo de UI. El resultado llega por
-        `document_loaded` o `load_failed`.
+        Opens a PDF off the UI thread. The result arrives through
+        `document_loaded` or `load_failed`.
         """
         if self._busy:
             return
@@ -108,8 +108,8 @@ class PdfViewModel(QObject):
         policy: OverwritePolicy = OverwritePolicy.FAIL,
     ) -> None:
         """
-        Parte el documento cargado. El resultado llega por `split_succeeded` o
-        `split_failed`.
+        Splits the loaded document. The result arrives through
+        `split_succeeded` or `split_failed`.
         """
         if self._busy or self._document is None:
             return
@@ -131,8 +131,8 @@ class PdfViewModel(QObject):
 
     def refresh_history(self, limit: Optional[int] = None) -> None:
         """
-        Recarga el historial. Es rápido (leer un JSON chico), así que corre en
-        el hilo principal y evita parpadeos en la lista.
+        Reloads the history. It is fast —reading a small JSON— so it runs on
+        the main thread and avoids flicker in the list.
         """
         try:
             self.history_changed.emit(self._list_history_use_case.execute(limit))
@@ -141,14 +141,14 @@ class PdfViewModel(QObject):
 
     def open_export(self, path: Path) -> None:
         """
-        Abre un PDF exportado con el visor del sistema.
+        Opens an exported PDF with the system viewer.
 
-        :raises FileOpenException: Si el archivo ya no está disponible.
+        :raises FileOpenException: If the file is no longer available.
         """
         self._file_storage.open_in_default_app(Path(path))
 
     # =========================
-    # Callbacks del worker
+    # Worker callbacks
     # =========================
 
     def _on_document_loaded(self, document: PdfDocument) -> None:
@@ -165,8 +165,8 @@ class PdfViewModel(QObject):
         self._set_busy(False)
         self.split_succeeded.emit(response)
 
-        # El registro va aparte del split: si el historial no se puede
-        # escribir, el PDF ya está en disco y la operación fue un éxito.
+        # Recording is separate from splitting: if the history cannot be
+        # written, the PDF is already on disk and the operation succeeded.
         try:
             self._record_use_case.execute(response)
         except Exception as error:

@@ -9,23 +9,23 @@ from kobun.domain.pdf.value_objects.page_selection import PageSelection
 @dataclass(frozen=True)
 class SplitPdfResponse:
     """
-    Resultado completo de un split: qué se pidió, qué se generó y cuándo.
+    The full result of a split: what was asked, what was produced, and when.
 
-    Incluye el origen y la selección además del destino porque el use case es
-    el único punto donde esos tres datos existen juntos. Sin esto, tanto el
-    historial como la UI tendrían que recomponer la operación cruzando lo que
-    enviaron con lo que recibieron.
+    It carries the source and the selection alongside the destination because
+    the use case is the only place where those three exist together. Without
+    it, both the history and the UI would have to reconstruct the operation by
+    matching what they sent against what they got back.
 
-    Es plano y sin entidades a propósito: así se serializa directo al
-    historial sin arrastrar estado mutable.
+    Flat and free of entities on purpose: that way it serialises straight into
+    the history without dragging mutable state along.
     """
 
     source_path: Path
     selection: PageSelection
 
     output_path: Path
-    """Ruta final y real. Puede diferir de la pedida si la política de
-    sobrescritura tuvo que buscar un nombre libre."""
+    """The real, final path. It can differ from the requested one if the
+    overwrite policy had to look for a free name."""
 
     output_size_bytes: int
     page_count: int

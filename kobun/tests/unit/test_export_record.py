@@ -32,7 +32,7 @@ def test_record_exposes_filenames():
 
 
 def test_record_keeps_the_selection_as_a_value_object():
-    """Guardar el VO permite ofrecer "repetir exportación" sin reparsear."""
+    """Keeping the VO allows offering "repeat export" without reparsing."""
     record = build()
 
     assert record.selection.total_pages == 6
@@ -70,5 +70,5 @@ def test_record_requires_timezone_aware_date():
 
 
 def test_record_accepts_zero_size():
-    """Un PDF de páginas en blanco puede ser diminuto, pero nunca negativo."""
+    """A PDF of blank pages can be tiny, but never negative."""
     assert build(size_bytes=0).size_bytes == 0

@@ -6,17 +6,17 @@ from pymupdf import Document
 
 from kobun.domain.pdf.value_objects.page_range import PageRange
 
-# Claves de metadata que entiende PyMuPDF y que Kobun sabe escribir.
+# Metadata keys PyMuPDF understands and Kobun knows how to write.
 _METADATA_KEYS = ("title", "author", "subject", "keywords", "creator", "producer")
 
 
 class PdfEngineAdapter:
     """
-    Envoltura delgada sobre PyMuPDF.
+    A thin wrapper over PyMuPDF.
 
-    Convención de índices: todos los métodos públicos reciben páginas
-    **1-based** e inclusivas, igual que el dominio y la UI. La traducción al
-    0-based de PyMuPDF ocurre exclusivamente dentro de esta clase.
+    Index convention: every public method takes **1-based**, inclusive pages,
+    same as the domain and the UI. Translating to PyMuPDF's 0-based indices
+    happens exclusively inside this class.
     """
 
     def open_document(self, file_path: Path) -> Document:
@@ -30,14 +30,14 @@ class PdfEngineAdapter:
 
     def needs_password(self, document: Document) -> bool:
         """
-        True si el documento está cifrado y no se aportó la contraseña.
+        True if the document is encrypted and no password was supplied.
         """
         return bool(document.needs_pass)
 
     def is_pdf(self, document: Document) -> bool:
         """
-        PyMuPDF abre también XPS, EPUB, CBZ e imágenes. Kobun sólo trabaja con
-        PDFs, así que hay que preguntar explícitamente.
+        PyMuPDF also opens XPS, EPUB, CBZ and images. Kobun only works with
+        PDFs, so it has to ask explicitly.
         """
         return bool(document.is_pdf)
 
@@ -46,7 +46,7 @@ class PdfEngineAdapter:
 
     def set_metadata(self, document: Document, metadata: Dict[str, Optional[str]]) -> None:
         """
-        Escribe metadata en el documento, ignorando claves desconocidas o vacías.
+        Writes metadata into the document, ignoring unknown or empty keys.
         """
         payload = {
             key: value
@@ -57,7 +57,7 @@ class PdfEngineAdapter:
 
     def extract_text(self, document: Document, page_number: int) -> str:
         """
-        :param page_number: Página 1-based.
+        :param page_number: 1-based page.
         """
         page = document.load_page(page_number - 1)
         return page.get_text("text")
@@ -67,7 +67,7 @@ class PdfEngineAdapter:
 
     def split_single_page(self, src_doc: Document, page_index: int) -> Document:
         """
-        :param page_index: Página 1-based a extraer.
+        :param page_index: 1-based page to extract.
         """
         return self.extract_page_ranges(src_doc, [PageRange(start=page_index, end=page_index)])
 
@@ -76,10 +76,11 @@ class PdfEngineAdapter:
 
     def extract_page_ranges(self, src_doc: Document, ranges: Sequence[PageRange]) -> Document:
         """
-        Copia varios rangos contiguos a un documento nuevo, en el orden recibido.
+        Copies several contiguous ranges into a new document, in the order
+        received.
 
-        Usa una sola inserción por rango en lugar de una por página, así extraer
-        "1-500" cuesta una operación y no quinientas.
+        It uses one insertion per range instead of one per page, so extracting
+        "1-500" costs one operation rather than five hundred.
         """
         new_doc = self.create_empty_document()
 
@@ -100,7 +101,7 @@ class PdfEngineAdapter:
 
     def extract_pages(self, document: Document, pages: List[int]) -> Document:
         """
-        :param pages: Páginas 1-based, en el orden en que deben quedar.
+        :param pages: 1-based pages, in the order they should end up in.
         """
         new_doc = self.create_empty_document()
 

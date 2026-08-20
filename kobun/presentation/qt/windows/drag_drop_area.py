@@ -10,12 +10,12 @@ HINT = "o hacé clic en Seleccionar archivo"
 
 class DragDropArea(QFrame):
     """
-    Zona para soltar un PDF o abrir el diálogo de archivos.
+    An area to drop a PDF on, or to open the file dialog from.
 
-    No valida el contenido del archivo: sólo filtra por extensión para dar
-    respuesta visual inmediata. La validación real —que sea un PDF legible, no
-    esté cifrado, tenga páginas— la hace LoadPdfUseCase, que es el único punto
-    donde debe vivir esa regla.
+    It does not validate the file's contents: it only filters by extension to
+    give immediate visual feedback. The real validation —that it is a readable
+    PDF, not encrypted, with pages— is LoadPdfUseCase's job, the only place
+    that rule should live.
     """
 
     file_dropped = Signal(Path)
@@ -45,7 +45,7 @@ class DragDropArea(QFrame):
         layout.addWidget(self.btn_browse, alignment=Qt.AlignmentFlag.AlignCenter)
 
     # =========================
-    # Presentación
+    # Presentation
     # =========================
 
     def show_document(self, filename: str, details: str) -> None:
@@ -86,8 +86,8 @@ class DragDropArea(QFrame):
     @staticmethod
     def _first_pdf(event) -> Optional[Path]:
         """
-        Con varios archivos soltados se toma el primer PDF y se ignoran el
-        resto: la pantalla trabaja sobre un documento a la vez.
+        When several files are dropped the first PDF is taken and the rest
+        ignored: the screen works on one document at a time.
         """
         mime = event.mimeData()
         if not mime.hasUrls():
@@ -107,7 +107,7 @@ class DragDropArea(QFrame):
 
     def _set_drag_active(self, active: bool) -> None:
         self.setProperty("dragActive", active)
-        # Qt no reevalúa selectores por propiedad hasta que se le pide.
+        # Qt does not re-evaluate property selectors until asked to.
         self.style().unpolish(self)
         self.style().polish(self)
 

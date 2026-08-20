@@ -32,7 +32,7 @@ def test_request_defaults_to_no_output_and_failing_on_collision():
 
 
 def test_request_normalizes_string_paths():
-    """La UI puede pasar directo lo que devuelve el diálogo de archivos."""
+    """The UI can pass straight through whatever the file dialog returns."""
     request = SplitPdfRequest("book.pdf", PageSelection.parse("1-5"), output_path="salida.pdf")
 
     assert isinstance(request.input_path, Path)
@@ -44,16 +44,16 @@ def test_request_is_immutable():
 
     try:
         request.input_path = Path("otro.pdf")
-        assert False, "El request no debería poder mutarse"
+        assert False, "the request should not be mutable"
     except AttributeError:
         pass
 
 
 def test_requests_with_the_same_content_are_equal():
-    primero = SplitPdfRequest(Path("book.pdf"), PageSelection.parse("1-5,3-8"))
-    segundo = SplitPdfRequest(Path("book.pdf"), PageSelection.parse("1-8"))
+    first = SplitPdfRequest(Path("book.pdf"), PageSelection.parse("1-5,3-8"))
+    second = SplitPdfRequest(Path("book.pdf"), PageSelection.parse("1-8"))
 
-    assert primero == segundo, "La selección se canoniza, así que ambas son la misma petición"
+    assert first == second, "the selection is canonicalised, so both are the same request"
 
 
 # =========================
@@ -68,7 +68,7 @@ def test_response_exposes_filenames_derived_from_paths():
 
 
 def test_response_keeps_the_three_facts_history_needs():
-    """Origen, selección y destino sólo coexisten aquí."""
+    """Source, selection and destination only coexist here."""
     response = build_response()
 
     assert response.source_path == Path("/libros/book.pdf")
@@ -95,7 +95,7 @@ def test_response_is_immutable():
 
     try:
         response.page_count = 99
-        assert False, "La respuesta no debería poder mutarse"
+        assert False, "the response should not be mutable"
     except AttributeError:
         pass
 

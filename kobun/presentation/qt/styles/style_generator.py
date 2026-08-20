@@ -1,37 +1,38 @@
 from kobun.shared.config.app_settings import THEME_ICONS_DIRECTORY
 from kobun.shared.theme import AppTheme
 
-# Radios en píxeles. Se nombran en vez de repetirse para que ajustar la
-# redondez de toda la app sea cambiar un número.
-RADIO_CHICO = 6
-RADIO_MEDIO = 9
-RADIO_GRANDE = 12
-RADIO_ZONA = 14
+# Radii in pixels. Named rather than repeated so adjusting the roundness of the
+# whole app is changing one number.
+RADIUS_SMALL = 6
+RADIUS_MEDIUM = 9
+RADIUS_LARGE = 12
+RADIUS_AREA = 14
 
 
 class StyleGenerator:
     """
     Transforma un AppTheme en una cadena QSS (Qt Style Sheets).
 
-    Todo el color de la aplicación sale de acá: los widgets no llevan estilos
-    propios, así que alternar tema es reemplazar esta hoja y nada más.
+    Every colour in the application comes from here: the widgets carry no
+    styles of their own, so switching theme is replacing this sheet and nothing
+    else.
 
-    La forma también: se prefieren superficies y espacio a marcos. Sólo llevan
-    borde los elementos donde el borde comunica algo —la zona de arrastre, que
-    invita a soltar, y los campos editables— en lugar de encajonar cada bloque.
+    Shape too: surfaces and space are preferred over frames. Only the elements
+    where a border communicates something carry one —the drop area, which
+    invites dropping, and the editable fields— instead of boxing every block.
     """
 
     @staticmethod
     def chevron_url(theme: AppTheme) -> str:
         """
-        Ruta del ícono de flecha para los desplegables.
+        Path to the chevron icon for the combo boxes.
 
-        Qt no permite dibujar la flecha con estilos: `QComboBox::down-arrow`
-        sólo acepta una imagen. Se usa un gris neutro por variante clara u
-        oscura, que funciona con cualquier color de acento.
+        Qt does not allow drawing the arrow with styles: `QComboBox::down-arrow`
+        only accepts an image. A neutral grey per light or dark variant is used,
+        which works with any accent colour.
 
-        Se emite en formato posix porque QSS espera barras normales incluso
-        en Windows.
+        Emitted in posix format because QSS expects forward slashes even on
+        Windows.
         """
         variant = "dark" if theme.is_dark else "light"
 
@@ -62,8 +63,8 @@ class StyleGenerator:
             font-size: 13px;
         }}
 
-        /* Sin esto los QLabel pintan el fondo general encima del panel que
-           los contiene, y se ve un recuadro alrededor de cada texto. */
+        /* Without this the QLabels paint the general background over the panel
+           containing them, and a box shows around every piece of text. */
         QLabel {{
             background: transparent;
         }}
@@ -107,19 +108,19 @@ class StyleGenerator:
             color: {success};
         }}
 
-        /* Separador de un píxel: divide sin encajonar. */
+        /* One pixel: divides without boxing in. */
         QFrame#Hairline {{
             background-color: {border};
             border: none;
             max-height: 1px;
         }}
 
-        /* Botón primario */
+        /* Primary button */
         QPushButton#PrimaryButton {{
             background-color: {primary};
             color: {text_inverse};
             border: none;
-            border-radius: {RADIO_GRANDE}px;
+            border-radius: {RADIUS_LARGE}px;
             padding: 12px 22px;
             font-weight: bold;
             font-size: 14px;
@@ -134,12 +135,12 @@ class StyleGenerator:
             color: {text_disabled};
         }}
 
-        /* Botones secundarios */
+        /* Secondary buttons */
         QPushButton {{
             background-color: {surface};
             color: {text_primary};
             border: 1px solid {border};
-            border-radius: {RADIO_MEDIO}px;
+            border-radius: {RADIUS_MEDIUM}px;
             padding: 9px 15px;
         }}
 
@@ -153,7 +154,7 @@ class StyleGenerator:
             border-color: {border};
         }}
 
-        /* Navegación: texto con barra de acento, no un botón encajonado. */
+        /* Navigation: text with an accent bar, not a boxed-in button. */
         QPushButton#NavButton {{
             background: transparent;
             border: none;
@@ -176,11 +177,11 @@ class StyleGenerator:
             font-weight: bold;
         }}
 
-        /* Entradas */
+        /* Inputs */
         QLineEdit {{
             background-color: {surface_alt};
             border: 1px solid transparent;
-            border-radius: {RADIO_MEDIO}px;
+            border-radius: {RADIUS_MEDIUM}px;
             padding: 10px 12px;
             color: {text_primary};
             selection-background-color: {primary};
@@ -204,9 +205,9 @@ class StyleGenerator:
         QComboBox {{
             background-color: {surface_alt};
             border: 1px solid transparent;
-            border-radius: {RADIO_MEDIO}px;
+            border-radius: {RADIUS_MEDIUM}px;
             padding: 9px 12px;
-            /* Fuerza la lista estilable en vez del popup nativo del sistema. */
+            /* Forces the styleable list instead of the system's native popup. */
             combobox-popup: 0;
         }}
 
@@ -235,16 +236,16 @@ class StyleGenerator:
         QComboBox QAbstractItemView {{
             background-color: {surface};
             border: 1px solid {border};
-            border-radius: {RADIO_MEDIO}px;
+            border-radius: {RADIUS_MEDIUM}px;
             padding: 5px;
             outline: none;
         }}
 
-        /* Sin ::item las filas quedan apretadas y sin realce al pasar el mouse. */
+        /* Without ::item the rows come out cramped and with no hover highlight. */
         QComboBox QAbstractItemView::item {{
             min-height: 28px;
             padding: 5px 9px;
-            border-radius: {RADIO_CHICO}px;
+            border-radius: {RADIUS_SMALL}px;
             color: {text_primary};
         }}
 
@@ -257,12 +258,12 @@ class StyleGenerator:
             color: {text_inverse};
         }}
 
-        /* Zona de arrastre: acá el borde sí comunica —invita a soltar—, así
-           que se conserva punteado, sólo más suave y más redondeado. */
+        /* Drop area: here the border does communicate —it invites dropping—
+           so it stays dashed, only softer and more rounded. */
         QFrame#DropArea {{
             background-color: {surface};
             border: 2px dashed {border};
-            border-radius: {RADIO_ZONA}px;
+            border-radius: {RADIUS_AREA}px;
         }}
 
         QFrame#DropArea:hover {{
@@ -274,18 +275,18 @@ class StyleGenerator:
             background-color: {surface_alt};
         }}
 
-        /* Historial: sin marco. La superficie ya lo separa del fondo. */
+        /* History: no frame. The surface already separates it from the background. */
         QListWidget {{
             background-color: {surface};
             border: none;
-            border-radius: {RADIO_GRANDE}px;
+            border-radius: {RADIUS_LARGE}px;
             padding: 8px;
             outline: none;
         }}
 
         QListWidget::item {{
             padding: 11px 12px;
-            border-radius: {RADIO_MEDIO}px;
+            border-radius: {RADIUS_MEDIUM}px;
             color: {text_primary};
         }}
 
@@ -318,7 +319,7 @@ class StyleGenerator:
             background: transparent;
         }}
 
-        /* Spinner indeterminado */
+        /* Indeterminate spinner */
         QProgressBar {{
             background-color: {surface_alt};
             border: none;
@@ -331,13 +332,13 @@ class StyleGenerator:
             border-radius: 3px;
         }}
 
-        /* Los tooltips del historial son largos; sin estilo propio heredan el
-           del sistema y en tema oscuro quedan ilegibles. */
+        /* The history tooltips are long; with no style of their own they
+           inherit the system's and turn illegible in a dark theme. */
         QToolTip {{
             background-color: {surface};
             color: {text_primary};
             border: 1px solid {border_strong};
-            border-radius: {RADIO_CHICO}px;
+            border-radius: {RADIUS_SMALL}px;
             padding: 7px 9px;
         }}
         """

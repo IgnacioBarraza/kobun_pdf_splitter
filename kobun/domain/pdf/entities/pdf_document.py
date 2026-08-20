@@ -57,8 +57,9 @@ class PdfDocument:
         """
         Marks the document as successfully processed.
 
-        :param page_count: Total number of pages detected. Se omite cuando el
-            conteo ya se conocía al abrir el documento y no ha cambiado.
+        :param page_count: Total number of pages detected. Omitted when the
+            count was already known when the document was opened and has not
+            changed.
         """
         if self.status != PdfProcessingStatus.PROCESSING:
             raise InvalidPdfException("Document must be processing before marking as processed.")

@@ -8,12 +8,12 @@ from kobun.domain.pdf.value_objects.overwrite_policy import OverwritePolicy
 
 class OutputPathResolver:
     """
-    Convierte lo que el usuario eligió como destino en una ruta de archivo
-    concreta y segura para escribir.
+    Turns whatever the user picked as a destination into a concrete file path
+    that is safe to write.
 
-    Está separado del use case a propósito: la UI necesita mostrar "se
-    guardará en X" *antes* de ejecutar el split, así que resolver la ruta
-    tiene que poder invocarse por su cuenta.
+    Separated from the use case on purpose: the UI needs to show "it will be
+    saved to X" *before* running the split, so resolving the path has to be
+    callable on its own.
     """
 
     def __init__(self, file_storage: FileStorage):
@@ -27,13 +27,13 @@ class OutputPathResolver:
         policy: OverwritePolicy = OverwritePolicy.FAIL,
     ) -> Path:
         """
-        :param requested: Lo que eligió el usuario: un archivo .pdf o un
-            directorio existente.
-        :param source_path: PDF de origen, para no escribir sobre él.
-        :param default_filename: Nombre a usar si `requested` es un directorio.
-        :param policy: Qué hacer si el archivo de destino ya existe.
-        :return: Ruta de archivo lista para escribir.
-        :raises InvalidOutputPathException: Si el destino no es utilizable.
+        :param requested: What the user picked: a .pdf file or an existing
+            directory.
+        :param source_path: The source PDF, so as not to write over it.
+        :param default_filename: Name to use if `requested` is a directory.
+        :param policy: What to do if the destination file already exists.
+        :return: A file path ready to write to.
+        :raises InvalidOutputPathException: If the destination is unusable.
         """
         target = self._as_file_path(requested, default_filename)
 
@@ -44,10 +44,9 @@ class OutputPathResolver:
 
     def _as_file_path(self, requested: Path, default_filename: str) -> Path:
         """
-        Acepta un directorio existente (le agrega el nombre por defecto) o una
-        ruta que ya termine en .pdf. Cualquier otra cosa es un error explícito:
-        adivinar la intención del usuario aquí produce archivos en lugares
-        inesperados.
+        Accepts an existing directory —appending the default name— or a path
+        that already ends in .pdf. Anything else is an explicit error: guessing
+        the user's intent here produces files in unexpected places.
         """
         if self._file_storage.is_directory(requested):
             return requested / default_filename
@@ -62,8 +61,8 @@ class OutputPathResolver:
 
     def _reject_source_overwrite(self, target: Path, source_path: Path) -> None:
         """
-        Escribir el resultado sobre el PDF de origen lo corrompe: el motor lo
-        tiene abierto para leer mientras guarda.
+        Writing the result over the source PDF corrupts it: the engine holds
+        it open for reading while it saves.
         """
         if self._file_storage.is_same_file(target, source_path):
             raise InvalidOutputPathException(
@@ -80,9 +79,9 @@ class OutputPathResolver:
                 f"Ya existe un directorio con esa ruta: {target}"
             )
 
-        # Comparación por valor y no por identidad: OverwritePolicy es un str
-        # Enum justamente para tolerar que llegue como texto desde un combo de
-        # Qt, un archivo de configuración o la línea de comandos.
+        # Compared by value and not by identity: OverwritePolicy is a str Enum
+        # precisely so it tolerates arriving as text from a Qt combo box, a
+        # configuration file or the command line.
         if policy == OverwritePolicy.OVERWRITE:
             return target
 

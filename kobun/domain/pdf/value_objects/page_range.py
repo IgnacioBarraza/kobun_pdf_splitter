@@ -2,14 +2,14 @@ from dataclasses import dataclass
 
 from kobun.domain.pdf.exceptions.invalid_page_range_exception import InvalidPageRangeException
 
-# Guiones que suelen aparecer al copiar rangos desde un PDF o un navegador.
+# Dashes that tend to appear when copying ranges from a PDF or a browser.
 _DASHES = ("–", "—", "−")
 
 
 @dataclass(frozen=True)
 class PageRange:
     """
-    Rango contiguo de páginas, en numeración 1-based e inclusiva en ambos extremos.
+    A contiguous page range, 1-based and inclusive at both ends.
     """
     start: int
     end: int
@@ -23,9 +23,9 @@ class PageRange:
     @classmethod
     def parse(cls, text: str) -> "PageRange":
         """
-        Construye un rango desde texto: "12" (página suelta) o "1-5".
+        Builds a range from text: "12" (a single page) or "1-5".
 
-        :raises InvalidPageRangeException: Si el texto no es un rango válido.
+        :raises InvalidPageRangeException: If the text is not a valid range.
         """
         raw = text.strip()
         for dash in _DASHES:
@@ -64,16 +64,16 @@ class PageRange:
 
     def overlaps_or_touches(self, other: "PageRange") -> bool:
         """
-        True si ambos rangos se solapan o son contiguos (1-5 y 6-10), es decir,
-        si pueden fusionarse sin alterar el conjunto de páginas resultante.
+        True if the two ranges overlap or are contiguous (1-5 and 6-10), that
+        is, if they can be merged without altering the resulting set of pages.
         """
         return self.start <= other.end + 1 and other.start <= self.end + 1
 
     def merge(self, other: "PageRange") -> "PageRange":
         """
-        Fusiona dos rangos solapados o contiguos en uno solo.
+        Merges two overlapping or contiguous ranges into one.
 
-        :raises InvalidPageRangeException: Si los rangos son disjuntos.
+        :raises InvalidPageRangeException: If the ranges are disjoint.
         """
         if not self.overlaps_or_touches(other):
             raise InvalidPageRangeException(f"Cannot merge disjoint ranges: {self} and {other}.")

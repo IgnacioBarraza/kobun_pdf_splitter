@@ -33,8 +33,8 @@ from kobun.shared.config.app_settings import (
 
 class KobunApplication:
     """
-    Punto de ensamblado: es el único lugar donde se eligen implementaciones
-    concretas. Todo lo demás recibe sus dependencias ya construidas.
+    The assembly point: the only place where concrete implementations get
+    chosen. Everything else receives its dependencies already built.
     """
 
     def __init__(self, directories: Optional[AppDirectories] = None):
@@ -69,31 +69,31 @@ class KobunApplication:
 
 def run(argv: Optional[List[str]] = None) -> int:
     """
-    Levanta la ventana y entra al bucle de eventos de Qt.
+    Brings the window up and enters Qt's event loop.
     """
     app = QApplication(argv if argv is not None else sys.argv)
     app.setApplicationName(APP_NAME)
 
-    # Fusion es el estilo propio de Qt y no el del sistema. Sin esto, parte
-    # del QSS queda pisada por el tema nativo y la ventana se ve distinta en
-    # cada máquina: era lo que hacía asomar el estilo de Ubuntu.
+    # Fusion is Qt's own style rather than the system's. Without this, part of
+    # the QSS gets overridden by the native theme and the window looks
+    # different on every machine: this is what let Ubuntu's style show through.
     app.setStyle("Fusion")
 
-    # Declara el app_id del escritorio. En Wayland es lo único que permite al
-    # compositor asociar la ventana con su .desktop —y por lo tanto con su
-    # icono—; sin esto el app_id sería "python3".
+    # Declares the desktop app_id. On Wayland it is the only thing that lets
+    # the compositor associate the window with its .desktop —and therefore with
+    # its icon—; without it the app_id would be "python3".
     app.setDesktopFileName(APP_ID)
 
-    # Sigue haciendo falta para X11 y Windows, donde el icono viaja con la
-    # ventana en lugar de resolverse por app_id.
+    # Still needed on X11 and Windows, where the icon travels with the window
+    # instead of being resolved through app_id.
     app.setWindowIcon(load_app_icon())
 
     window = KobunApplication().build_window()
     window.show()
 
-    # Un PDF pasado por línea de comandos —o elegido desde "Abrir con" en el
-    # explorador— se carga por el mismo camino que el drag & drop, así que
-    # hereda su validación y su manejo de errores.
+    # A PDF passed on the command line —or chosen through "Open with" in the
+    # file manager— is loaded down the same path as drag & drop, so it inherits
+    # its validation and its error handling.
     pdf = first_pdf_argument(argv if argv is not None else sys.argv)
     if pdf is not None:
         window.open_document(pdf)

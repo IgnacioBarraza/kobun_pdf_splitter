@@ -7,12 +7,12 @@ from kobun.application.interfaces.history_repository import HistoryRepository
 
 class ListHistoryUseCase:
     """
-    Devuelve el historial de exportaciones, marcando cuáles siguen existiendo
-    en disco.
+    Returns the export history, flagging which entries still exist on disk.
 
-    Las entradas cuyo archivo desapareció no se filtran: se marcan. Borrarlas
-    en silencio confundiría al usuario, que recuerda haber exportado ese
-    archivo; verlo en gris le dice qué pasó y le deja decidir.
+    Entries whose file is gone are not filtered out: they are flagged. Dropping
+    them silently would confuse the user, who remembers exporting that file;
+    seeing it greyed out tells them what happened and leaves the decision to
+    them.
     """
 
     def __init__(self, history_repository: HistoryRepository, file_storage: FileStorage):
@@ -21,8 +21,8 @@ class ListHistoryUseCase:
 
     def execute(self, limit: Optional[int] = None) -> List[HistoryEntry]:
         """
-        :param limit: Cantidad máxima de entradas, de la más reciente a la más
-            antigua. None devuelve todas.
+        :param limit: Maximum number of entries, newest to oldest. None
+            returns all of them.
         """
         records = self._history_repository.list_recent(limit)
 

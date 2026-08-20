@@ -1,13 +1,13 @@
 """
-Tests de integración: ejercitan el use case completo contra PDFs reales
-generados en tiempo de test, atravesando repositorio, adapter y PyMuPDF.
+Integration tests: they exercise the whole use case against real PDFs generated
+at test time, going through repository, adapter and PyMuPDF.
 
-Se omiten automáticamente si PyMuPDF no está instalado, para que la suite
-unitaria del dominio siga corriendo sin dependencias.
+They skip themselves if PyMuPDF is not installed, so the domain's unit suite
+keeps running with no dependencies.
 """
 import pytest
 
-pymupdf = pytest.importorskip("pymupdf", reason="PyMuPDF no instalado")
+pymupdf = pytest.importorskip("pymupdf", reason="PyMuPDF is not installed")
 
 from kobun.application.dto.split_pdf_request import SplitPdfRequest
 from kobun.application.services.output_path_resolver import OutputPathResolver
@@ -35,8 +35,8 @@ SOURCE_PAGES = 30
 @pytest.fixture
 def source_pdf(tmp_path):
     """
-    PDF de 30 páginas donde cada página dice "PAGINA n", para poder verificar
-    que se extrajeron exactamente las páginas pedidas y no un off-by-one.
+    A 30 page PDF where each page reads "PAGINA n", so it can be verified that
+    exactly the requested pages came out and not an off-by-one.
     """
     path = tmp_path / "source.pdf"
 
@@ -133,34 +133,34 @@ def test_derived_metadata_is_written_to_the_output_file(use_case, source_pdf, tm
 
 def test_a_source_without_title_yields_a_clean_derived_title(use_case, tmp_path):
     """
-    Caso real: un PDF sin metadata de título dejaba el archivo exportado con
-    un título como "contrato.pdf (3-6)".
+    A real case: a PDF with no title metadata left the exported file with a
+    title like "contrato.pdf (3-6)".
     """
-    sin_titulo = tmp_path / "2026.03.01_Contrato_Indefinido.pdf"
+    untitled = tmp_path / "2026.03.01_Contrato_Indefinido.pdf"
     doc = pymupdf.open()
     for _ in range(8):
         doc.new_page()
-    doc.save(sin_titulo)
+    doc.save(untitled)
     doc.close()
 
-    resultado = use_case.execute(SplitPdfRequest(sin_titulo, PageSelection.parse("3-6")))
-    metadata = read_metadata(resultado.output_path)
+    result = use_case.execute(SplitPdfRequest(untitled, PageSelection.parse("3-6")))
+    metadata = read_metadata(result.output_path)
 
     assert metadata["title"] == "2026.03.01_Contrato_Indefinido (3-6)"
     assert ".pdf" not in metadata["title"]
 
 
 def test_open_document_derives_a_title_without_the_extension(repository, tmp_path):
-    sin_titulo = tmp_path / "apunte.pdf"
+    untitled = tmp_path / "apunte.pdf"
     doc = pymupdf.open()
     doc.new_page()
-    doc.save(sin_titulo)
+    doc.save(untitled)
     doc.close()
 
-    document = repository.open_document(sin_titulo)
+    document = repository.open_document(untitled)
 
     assert document.metadata.title == "apunte"
-    assert document.filename == "apunte.pdf", "el nombre del archivo sí conserva la extensión"
+    assert document.filename == "apunte.pdf", "the filename does keep its extension"
 
 
 def test_selection_beyond_document_fails_with_domain_error(use_case, source_pdf, tmp_path):
@@ -170,13 +170,13 @@ def test_selection_beyond_document_fails_with_domain_error(use_case, source_pdf,
 
 def test_engine_failure_is_not_masked_by_cleanup(source_pdf, tmp_path):
     """
-    Regresión: el `finally` del repositorio cerraba un documento que podía no
-    existir, lo que reemplazaba el error real por un UnboundLocalError.
+    Regression: the repository's `finally` closed a document that might not
+    exist, which replaced the real error with an UnboundLocalError.
     """
 
     class ExplodingAdapter(PdfEngineAdapter):
         def extract_page_ranges(self, src_doc, ranges):
-            raise RuntimeError("fallo simulado del motor")
+            raise RuntimeError("simulated engine failure")
 
     use_case = SplitPdfUseCase(
         PyMuPdfRepository(ExplodingAdapter()),
@@ -184,7 +184,7 @@ def test_engine_failure_is_not_masked_by_cleanup(source_pdf, tmp_path):
         OutputPathResolver(LocalFileStorage()),
     )
 
-    with pytest.raises(RuntimeError, match="fallo simulado del motor"):
+    with pytest.raises(RuntimeError, match="simulated engine failure"):
         use_case.execute(SplitPdfRequest(source_pdf, PageSelection.parse("1-2"), tmp_path / "boom.pdf"))
 
 
@@ -260,57 +260,57 @@ def test_load_rejects_missing_file(load_use_case, tmp_path):
 
 def test_load_rejects_a_directory(load_use_case, tmp_path):
     """Un drag & drop puede soltar una carpeta."""
-    carpeta = tmp_path / "carpeta.pdf"
-    carpeta.mkdir()
+    folder = tmp_path / "carpeta.pdf"
+    folder.mkdir()
 
     with pytest.raises(InvalidPdfException, match="no es un archivo"):
-        load_use_case.execute(carpeta)
+        load_use_case.execute(folder)
 
 
 def test_load_rejects_a_non_pdf_extension(load_use_case, tmp_path):
-    texto = tmp_path / "notas.txt"
-    texto.write_text("hola")
+    text = tmp_path / "notas.txt"
+    text.write_text("hola")
 
     with pytest.raises(InvalidPdfException, match="no es un PDF"):
-        load_use_case.execute(texto)
+        load_use_case.execute(text)
 
 
 def test_load_rejects_an_empty_file(load_use_case, tmp_path):
-    vacio = tmp_path / "vacio.pdf"
-    vacio.touch()
+    empty_file = tmp_path / "empty_file.pdf"
+    empty_file.touch()
 
     with pytest.raises(InvalidPdfException, match="está vacío"):
-        load_use_case.execute(vacio)
+        load_use_case.execute(empty_file)
 
 
 def test_load_rejects_a_jpeg_renamed_as_pdf(load_use_case, tmp_path):
     """
-    PyMuPDF sniffea el contenido y abre el JPEG sin quejarse, así que el filtro
-    de extensión no alcanza: lo detiene la comprobación `is_pdf`.
+    PyMuPDF sniffs the content and opens the JPEG without complaining, so the
+    extension filter is not enough: the `is_pdf` check is what stops it.
     """
-    disfrazado = tmp_path / "imagen.pdf"
-    disfrazado.write_bytes(b"\xff\xd8\xff\xe0JFIF y basura binaria que no es un PDF")
+    disguised = tmp_path / "image.pdf"
+    disguised.write_bytes(b"\xff\xd8\xff\xe0JFIF y garbage binaria que no es un PDF")
 
     with pytest.raises(InvalidPdfException, match="no es un PDF"):
-        load_use_case.execute(disfrazado)
+        load_use_case.execute(disguised)
 
 
 def test_load_rejects_a_truncated_pdf(load_use_case, tmp_path):
     """
-    PyMuPDF es muy tolerante: en vez de fallar, recupera el archivo y lo
-    reporta como un PDF de 0 páginas. Lo detiene la comprobación de páginas.
+    PyMuPDF is very tolerant: instead of failing, it recovers the file and
+    reports it as a 0 page PDF. The page count check is what stops it.
     """
-    corrupto = tmp_path / "corrupto.pdf"
-    corrupto.write_bytes(b"%PDF-1.7\n1 0 obj\n<< /Type /Catalog\ntruncado sin trailer")
+    corrupt = tmp_path / "corrupt.pdf"
+    corrupt.write_bytes(b"%PDF-1.7\n1 0 obj\n<< /Type /Catalog\ntruncado sin trailer")
 
     with pytest.raises(InvalidPdfException, match="no contiene páginas"):
-        load_use_case.execute(corrupto)
+        load_use_case.execute(corrupt)
 
 
 def test_engine_open_errors_are_translated_to_domain_exceptions(source_pdf):
     """
-    Cuando el motor sí lanza al abrir, el error no debe escapar como excepción
-    de PyMuPDF: la UI sólo debe tener que capturar InvalidPdfException.
+    When the engine does raise on open, the error must not escape as a PyMuPDF
+    exception: the UI should only ever have to catch InvalidPdfException.
     """
 
     class FailingAdapter(PdfEngineAdapter):
@@ -326,12 +326,12 @@ def test_engine_open_errors_are_translated_to_domain_exceptions(source_pdf):
 
 
 def test_load_rejects_a_password_protected_pdf(load_use_case, tmp_path):
-    protegido = tmp_path / "protegido.pdf"
+    protected = tmp_path / "protected.pdf"
 
     doc = pymupdf.open()
     doc.new_page()
     doc.save(
-        protegido,
+        protected,
         encryption=pymupdf.PDF_ENCRYPT_AES_256,
         owner_pw="dueno",
         user_pw="secreto",
@@ -339,25 +339,25 @@ def test_load_rejects_a_password_protected_pdf(load_use_case, tmp_path):
     doc.close()
 
     with pytest.raises(EncryptedPdfException, match="protegido con contraseña"):
-        load_use_case.execute(protegido)
+        load_use_case.execute(protected)
 
 
 def test_load_rejects_a_non_pdf_format_that_pymupdf_can_open(load_use_case, tmp_path):
     """
-    PyMuPDF abre imágenes sin problema. Con extensión .pdf pasa el filtro de
-    extensión y abre bien, así que hace falta preguntar `is_pdf`.
+    PyMuPDF opens images without trouble. With a .pdf extension it passes the
+    extension filter and opens fine, so `is_pdf` has to be asked.
     """
-    imagen = tmp_path / "imagen_real.pdf"
+    image = tmp_path / "image_real.pdf"
 
     doc = pymupdf.open()
     page = doc.new_page()
     page.insert_text((72, 72), "x")
     pix = page.get_pixmap()
     doc.close()
-    pix.save(imagen, output="png")
+    pix.save(image, output="png")
 
     with pytest.raises(InvalidPdfException, match="no es un PDF"):
-        load_use_case.execute(imagen)
+        load_use_case.execute(image)
 
 
 def test_engine_exceptions_never_reach_the_caller(load_use_case, tmp_path):
@@ -366,13 +366,13 @@ def test_engine_exceptions_never_reach_the_caller(load_use_case, tmp_path):
     """
     casos = [tmp_path / "no_existe.pdf"]
 
-    vacio = tmp_path / "v.pdf"
-    vacio.touch()
-    casos.append(vacio)
+    empty_file = tmp_path / "v.pdf"
+    empty_file.touch()
+    casos.append(empty_file)
 
-    basura = tmp_path / "b.pdf"
-    basura.write_bytes(b"no soy un pdf")
-    casos.append(basura)
+    garbage = tmp_path / "b.pdf"
+    garbage.write_bytes(b"no soy un pdf")
+    casos.append(garbage)
 
     for caso in casos:
         with pytest.raises(InvalidPdfException):
@@ -380,7 +380,7 @@ def test_engine_exceptions_never_reach_the_caller(load_use_case, tmp_path):
 
 
 # =========================================================
-# Política de ruta de salida (bloque 2)
+# Output path policy
 # =========================================================
 
 def test_default_output_lands_next_to_the_source_with_suggested_name(use_case, source_pdf):
@@ -391,62 +391,62 @@ def test_default_output_lands_next_to_the_source_with_suggested_name(use_case, s
 
 
 def test_output_directory_receives_the_suggested_name(use_case, source_pdf, tmp_path):
-    destino = tmp_path / "exports"
-    destino.mkdir()
+    destination = tmp_path / "exports"
+    destination.mkdir()
 
-    result = use_case.execute(SplitPdfRequest(source_pdf, PageSelection.parse("5-6"), destino))
+    result = use_case.execute(SplitPdfRequest(source_pdf, PageSelection.parse("5-6"), destination))
 
-    assert result.output_path == destino / "source_5-6.pdf"
+    assert result.output_path == destination / "source_5-6.pdf"
     assert read_pages(result.output_path) == labels(5, 6)
 
 
 def test_existing_output_is_not_overwritten_by_default(use_case, source_pdf, tmp_path):
-    ocupado = tmp_path / "ocupado.pdf"
-    ocupado.write_bytes(b"contenido previo")
+    taken = tmp_path / "ocupado.pdf"
+    taken.write_bytes(b"contenido previo")
 
     with pytest.raises(InvalidOutputPathException, match="ya existe"):
-        use_case.execute(SplitPdfRequest(source_pdf, PageSelection.parse("1-2"), ocupado))
+        use_case.execute(SplitPdfRequest(source_pdf, PageSelection.parse("1-2"), taken))
 
-    assert ocupado.read_bytes() == b"contenido previo", "El archivo previo debe quedar intacto"
+    assert taken.read_bytes() == b"contenido previo", "El archivo previo debe quedar intacto"
 
 
 def test_overwrite_policy_replaces_the_existing_file(use_case, source_pdf, tmp_path):
-    ocupado = tmp_path / "ocupado.pdf"
-    ocupado.write_bytes(b"contenido previo")
+    taken = tmp_path / "ocupado.pdf"
+    taken.write_bytes(b"contenido previo")
 
     result = use_case.execute(SplitPdfRequest(
-        source_pdf, PageSelection.parse("1-2"), ocupado, OverwritePolicy.OVERWRITE
+        source_pdf, PageSelection.parse("1-2"), taken, OverwritePolicy.OVERWRITE
     ))
 
-    assert result.output_path == ocupado
-    assert read_pages(ocupado) == labels(1, 2)
+    assert result.output_path == taken
+    assert read_pages(taken) == labels(1, 2)
 
 
 def test_rename_policy_writes_beside_the_existing_file(use_case, source_pdf, tmp_path):
-    ocupado = tmp_path / "ocupado.pdf"
-    ocupado.write_bytes(b"contenido previo")
+    taken = tmp_path / "ocupado.pdf"
+    taken.write_bytes(b"contenido previo")
 
     result = use_case.execute(SplitPdfRequest(
-        source_pdf, PageSelection.parse("1-2"), ocupado, OverwritePolicy.RENAME
+        source_pdf, PageSelection.parse("1-2"), taken, OverwritePolicy.RENAME
     ))
 
     assert result.output_path == tmp_path / "ocupado_1.pdf"
-    assert ocupado.read_bytes() == b"contenido previo"
+    assert taken.read_bytes() == b"contenido previo"
     assert read_pages(result.output_path) == labels(1, 2)
 
 
 def test_repeated_exports_with_rename_never_collide(use_case, source_pdf, tmp_path):
-    destino = tmp_path / "cap.pdf"
+    destination = tmp_path / "cap.pdf"
 
-    rutas = [
+    paths = [
         use_case.execute(SplitPdfRequest(
-            source_pdf, PageSelection.parse("1-2"), destino, OverwritePolicy.RENAME
+            source_pdf, PageSelection.parse("1-2"), destination, OverwritePolicy.RENAME
         )).output_path
         for _ in range(3)
     ]
 
-    assert rutas == [tmp_path / "cap.pdf", tmp_path / "cap_1.pdf", tmp_path / "cap_2.pdf"]
-    assert all(read_pages(ruta) == labels(1, 2) for ruta in rutas)
+    assert paths == [tmp_path / "cap.pdf", tmp_path / "cap_1.pdf", tmp_path / "cap_2.pdf"]
+    assert all(read_pages(path) == labels(1, 2) for path in paths)
 
 
 def test_cannot_write_the_result_over_the_source_pdf(use_case, source_pdf):
@@ -455,7 +455,7 @@ def test_cannot_write_the_result_over_the_source_pdf(use_case, source_pdf):
     with pytest.raises(InvalidOutputPathException, match="mismo archivo de origen"):
         use_case.execute(SplitPdfRequest(source_pdf, PageSelection.parse("1-2"), source_pdf))
 
-    assert source_pdf.read_bytes() == original, "El PDF de origen no debe tocarse"
+    assert source_pdf.read_bytes() == original, "the source PDF must not be touched"
 
 
 def test_missing_output_directory_fails_before_processing(use_case, source_pdf, tmp_path):
@@ -479,70 +479,70 @@ def test_suggested_path_matches_what_execute_actually_writes(use_case, load_use_
 
 @pytest.fixture
 def history(tmp_path):
-    repositorio = JsonHistoryRepository(tmp_path / "datos" / "history.json")
+    repository = JsonHistoryRepository(tmp_path / "datos" / "history.json")
     almacenamiento = LocalFileStorage()
 
     return (
-        RecordSplitUseCase(repositorio),
-        ListHistoryUseCase(repositorio, almacenamiento),
-        repositorio,
+        RecordSplitUseCase(repository),
+        ListHistoryUseCase(repository, almacenamiento),
+        repository,
     )
 
 
 def test_a_real_export_can_be_recorded_and_listed(use_case, source_pdf, history):
-    grabar, listar, _ = history
+    record_use_case, listing, _ = history
 
     response = use_case.execute(SplitPdfRequest(source_pdf, PageSelection.parse("1-3,10")))
-    grabar.execute(response)
+    record_use_case.execute(response)
 
-    entradas = listar.execute()
+    entries = listing.execute()
 
-    assert len(entradas) == 1
-    assert entradas[0].is_available is True
-    assert entradas[0].record.output_path == response.output_path
-    assert entradas[0].record.page_count == 4
-    assert entradas[0].record.size_bytes == response.output_path.stat().st_size
+    assert len(entries) == 1
+    assert entries[0].is_available is True
+    assert entries[0].record.output_path == response.output_path
+    assert entries[0].record.page_count == 4
+    assert entries[0].record.size_bytes == response.output_path.stat().st_size
 
 
 def test_history_survives_a_new_repository_instance(use_case, source_pdf, history, tmp_path):
-    """El historial debe sobrevivir al cierre de la aplicación."""
-    grabar, _, repositorio = history
+    """The history has to survive closing the application."""
+    record_use_case, _, repository = history
 
-    grabar.execute(use_case.execute(SplitPdfRequest(source_pdf, PageSelection.parse("2-4"))))
+    record_use_case.execute(use_case.execute(SplitPdfRequest(source_pdf, PageSelection.parse("2-4"))))
 
-    otra_sesion = ListHistoryUseCase(
-        JsonHistoryRepository(repositorio.file_path), LocalFileStorage()
+    another_session = ListHistoryUseCase(
+        JsonHistoryRepository(repository.file_path), LocalFileStorage()
     )
 
-    assert len(otra_sesion.execute()) == 1
+    assert len(another_session.execute()) == 1
 
 
 def test_deleted_exports_are_marked_not_removed(use_case, source_pdf, history):
-    grabar, listar, _ = history
+    record_use_case, listing, _ = history
 
     borrado = use_case.execute(SplitPdfRequest(source_pdf, PageSelection.parse("1-2")))
     vigente = use_case.execute(SplitPdfRequest(source_pdf, PageSelection.parse("5-6")))
-    grabar.execute(borrado)
-    grabar.execute(vigente)
+    record_use_case.execute(borrado)
+    record_use_case.execute(vigente)
 
     borrado.output_path.unlink()
-    entradas = listar.execute()
+    entries = listing.execute()
 
-    assert len(entradas) == 2, "La entrada muerta se marca, no se filtra"
-    assert entradas[0].record.output_path == vigente.output_path
-    assert entradas[0].is_available is True
-    assert entradas[1].is_available is False
+    assert len(entries) == 2, "the dead entry is flagged, not filtered out"
+    assert entries[0].record.output_path == vigente.output_path
+    assert entries[0].is_available is True
+    assert entries[1].is_available is False
 
 
 def test_recorded_selection_can_be_replayed(use_case, source_pdf, history, tmp_path):
     """
-    El historial guarda la selección como Value Object, así que repetir una
-    exportación no requiere volver a parsear texto.
+    The history keeps the selection as a Value Object, so repeating an export
+    does not require parsing text again.
     """
-    grabar, listar, _ = history
-    grabar.execute(use_case.execute(SplitPdfRequest(source_pdf, PageSelection.parse("3-5,20"))))
+    record_use_case, listing, _ = history
+    record_use_case.execute(use_case.execute(SplitPdfRequest(source_pdf, PageSelection.parse("3-5,20"))))
 
-    guardada = listar.execute()[0].record.selection
-    repetido = use_case.execute(SplitPdfRequest(source_pdf, guardada, tmp_path / "repetido.pdf"))
+    saved = listing.execute()[0].record.selection
+    repeated = use_case.execute(SplitPdfRequest(source_pdf, saved, tmp_path / "repeated.pdf"))
 
-    assert read_pages(repetido.output_path) == labels(3, 4, 5, 20)
+    assert read_pages(repeated.output_path) == labels(3, 4, 5, 20)

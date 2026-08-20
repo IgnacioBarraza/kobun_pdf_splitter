@@ -22,10 +22,10 @@ HISTORY_PAGE = 1
 
 class Ui_MainWindow:
     """
-    Construcción de la interfaz, sin ninguna lógica.
+    Building the interface, with no logic at all.
 
-    Los widgets no llevan estilos propios: todo el color sale del QSS que
-    genera StyleGenerator, para que alternar tema sea reemplazar una hoja.
+    The widgets carry no styles of their own: every colour comes from the QSS
+    StyleGenerator produces, so switching theme is replacing one stylesheet.
     """
 
     def setupUi(self, MainWindow) -> None:
@@ -53,24 +53,24 @@ class Ui_MainWindow:
         self.sidebar.setFixedWidth(224)
 
         layout = QVBoxLayout(self.sidebar)
-        # Sin margen horizontal: la barra de acento de la navegación tiene que
-        # tocar el borde del panel, como en un rail.
+        # No horizontal margin: the navigation's accent bar has to touch the
+        # panel's edge, like a rail.
         layout.setContentsMargins(0, 26, 0, 22)
         layout.setSpacing(0)
 
-        cabecera = QVBoxLayout()
-        cabecera.setContentsMargins(18, 0, 18, 0)
-        cabecera.setSpacing(2)
+        header = QVBoxLayout()
+        header.setContentsMargins(18, 0, 18, 0)
+        header.setSpacing(2)
 
         self.label_logo = QLabel("KOBUN")
         self.label_logo.setObjectName("Logo")
-        cabecera.addWidget(self.label_logo)
+        header.addWidget(self.label_logo)
 
         self.label_tagline = QLabel("Dividir PDFs")
         self.label_tagline.setObjectName("SecondaryText")
-        cabecera.addWidget(self.label_tagline)
+        header.addWidget(self.label_tagline)
 
-        layout.addLayout(cabecera)
+        layout.addLayout(header)
         layout.addSpacing(28)
 
         self.btn_split = self._nav_button("Dividir PDF", checked=True)
@@ -81,36 +81,36 @@ class Ui_MainWindow:
 
         layout.addStretch()
 
-        pie = QVBoxLayout()
-        pie.setContentsMargins(18, 0, 18, 0)
-        pie.setSpacing(6)
+        footer = QVBoxLayout()
+        footer.setContentsMargins(18, 0, 18, 0)
+        footer.setSpacing(6)
 
         self.label_theme = QLabel("TEMA")
         self.label_theme.setObjectName("SectionLabel")
-        pie.addWidget(self.label_theme)
+        footer.addWidget(self.label_theme)
 
         self.combo_theme = QComboBox()
-        pie.addWidget(self.combo_theme)
+        footer.addWidget(self.combo_theme)
 
-        # La versión sale del paquete, no de una constante propia: así el
-        # nombre del archivo descargado puede quedar limpio y saber qué versión
-        # se está usando sigue siendo posible desde la app.
+        # The version comes from the package and not from a constant of its
+        # own: that way the downloaded file's name can stay clean while knowing
+        # which version is running is still possible from inside the app.
         self.label_version = QLabel(f"v{kobun.__version__}")
         self.label_version.setObjectName("SecondaryText")
-        pie.addWidget(self.label_version)
+        footer.addWidget(self.label_version)
 
-        layout.addLayout(pie)
+        layout.addLayout(footer)
 
         return self.sidebar
 
     @staticmethod
     def _hairline() -> QFrame:
-        """Línea de un píxel: separa secciones sin encerrarlas en un marco."""
-        linea = QFrame()
-        linea.setObjectName("Hairline")
-        linea.setFixedHeight(1)
+        """One pixel: separates sections without boxing them into a frame."""
+        line = QFrame()
+        line.setObjectName("Hairline")
+        line.setFixedHeight(1)
 
-        return linea
+        return line
 
     @staticmethod
     def _nav_button(text: str, checked: bool = False) -> QPushButton:
@@ -123,7 +123,7 @@ class Ui_MainWindow:
         return button
 
     # =========================
-    # Contenido
+    # Content
     # =========================
 
     def _build_content(self) -> QFrame:
@@ -140,7 +140,7 @@ class Ui_MainWindow:
         layout.addWidget(self.pages, stretch=1)
 
         self.progress = QProgressBar()
-        self.progress.setRange(0, 0)  # Indeterminado: no sabemos cuánto falta.
+        self.progress.setRange(0, 0)  # Indeterminate: there is no way to know how much is left.
         self.progress.setTextVisible(False)
         self.progress.setVisible(False)
         layout.addWidget(self.progress)

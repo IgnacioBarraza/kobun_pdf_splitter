@@ -29,11 +29,11 @@ NO_FOLDER = "Elegí un PDF para definir la carpeta de destino."
 
 class SplitOptionsWidget(QWidget):
     """
-    Rangos de páginas, destino y política de sobrescritura.
+    Page ranges, destination and overwrite policy.
 
-    Sólo recolecta lo que el usuario escribe; no valida ni parsea. El texto va
-    tal cual a PageSelection.parse y la ruta a la política de salida, que son
-    quienes saben qué es válido.
+    It only collects what the user types; it neither validates nor parses. The
+    text goes as it is to PageSelection.parse and the path to the output
+    policy, which are the ones that know what is valid.
     """
 
     selection_changed = Signal(str)
@@ -41,9 +41,9 @@ class SplitOptionsWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        # El campo muestra sólo el nombre del archivo; la carpeta se guarda
-        # aparte y se informa debajo. Mostrar la ruta completa en el campo la
-        # volvía ilegible y no era lo que el usuario necesita editar.
+        # The field shows only the filename; the folder is kept apart and
+        # reported below. Showing the full path in the field made it unreadable,
+        # and it is not what the user needs to edit.
         self._directory: Optional[Path] = None
 
         layout = QVBoxLayout(self)
@@ -78,9 +78,9 @@ class SplitOptionsWidget(QWidget):
 
         self.label_folder = QLabel(NO_FOLDER)
         self.label_folder.setObjectName("SecondaryText")
-        # Ignored en horizontal: sin esto el sizeHint de una ruta larga expande
-        # el layout más allá de la ventana y el texto se corta contra el borde
-        # en lugar de recortarse con puntos suspensivos.
+        # Ignored horizontally: without this the sizeHint of a long path
+        # expands the layout past the window and the text gets cut against the
+        # edge instead of being elided with an ellipsis.
         self.label_folder.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         layout.addWidget(self.label_folder)
 
@@ -92,7 +92,7 @@ class SplitOptionsWidget(QWidget):
         layout.addWidget(self.combo_policy)
 
     # =========================
-    # Lectura
+    # Reading
     # =========================
 
     @property
@@ -106,11 +106,11 @@ class SplitOptionsWidget(QWidget):
     @property
     def destination(self) -> Optional[Path]:
         """
-        Ruta completa a escribir: la carpeta recordada más el nombre tipeado.
+        The full path to write: the remembered folder plus the typed name.
 
-        Devuelve None si no hay nombre, para que el use case caiga en su ruta
-        sugerida. Agrega la extensión si falta: el campo pide un nombre, así
-        que exigirle al usuario que escriba ".pdf" sería un error evitable.
+        Returns None when there is no name, so the use case falls back to its
+        suggested path. It appends the extension if missing: the field asks for
+        a name, so demanding the user type ".pdf" would be an avoidable error.
         """
         name = self.output_name
         if not name or self._directory is None:
@@ -124,9 +124,9 @@ class SplitOptionsWidget(QWidget):
     @property
     def policy(self) -> OverwritePolicy:
         """
-        Qt guarda la data de los items como QVariant y devuelve el enum
-        convertido a str plano, así que hay que reconstruirlo. Sin esto el
-        resto del sistema recibe "rename" en lugar de OverwritePolicy.RENAME.
+        Qt stores item data as a QVariant and hands the enum back as a plain
+        str, so it has to be rebuilt. Without this the rest of the system gets
+        "rename" instead of OverwritePolicy.RENAME.
         """
         return OverwritePolicy(self.combo_policy.currentData())
 
@@ -137,20 +137,20 @@ class SplitOptionsWidget(QWidget):
                 return
 
     # =========================
-    # Escritura
+    # Writing
     # =========================
 
     def set_directory(self, directory: Optional[Path]) -> None:
         """
-        Carpeta donde se escribirá. Se fija al cargar un documento y puede
-        cambiarla el diálogo de guardado.
+        The folder to write into. Set when a document loads, and the save
+        dialog can change it.
         """
         self._directory = Path(directory) if directory is not None else None
         self._render_folder()
 
     def set_destination(self, path: Path) -> None:
         """
-        Fija carpeta y nombre a partir de una ruta completa.
+        Sets folder and name from a full path.
         """
         path = Path(path)
         self.set_directory(path.parent)
@@ -158,7 +158,8 @@ class SplitOptionsWidget(QWidget):
 
     def set_suggested_destination(self, path: Optional[Path]) -> None:
         """
-        Precarga el destino sugerido. Nunca pisa lo que el usuario escribió.
+        Prefills the suggested destination. It never overwrites what the user
+        typed.
         """
         if path is not None and not self.output_name:
             self.set_destination(path)
@@ -174,14 +175,14 @@ class SplitOptionsWidget(QWidget):
         self.combo_policy.setEnabled(enabled)
 
     def resizeEvent(self, event) -> None:
-        # La ruta de la carpeta puede ser larguísima; se recorta al ancho
-        # disponible para que no ensanche la ventana.
+        # A folder path can be extremely long; it is elided to the available
+        # width so it does not widen the window.
         super().resizeEvent(event)
         self._render_folder()
 
     def showEvent(self, event) -> None:
-        # Al fijar la carpeta el layout todavía no corrió, así que el ancho
-        # disponible era el inicial. Se recalcula cuando ya hay geometría real.
+        # When the folder was set the layout had not run yet, so the available
+        # width was the initial one. It is recomputed once geometry is real.
         super().showEvent(event)
         self._render_folder()
 
@@ -191,21 +192,21 @@ class SplitOptionsWidget(QWidget):
             self.label_folder.setToolTip("")
             return
 
-        completa = str(self._directory)
+        full = str(self._directory)
         metrics = QFontMetrics(self.label_folder.font())
-        # Se mide contra el ancho del widget contenedor: el del label es
-        # "Ignored", así que no refleja un límite útil.
-        disponible = max(self.width() - 90, 120)
+        # Measured against the containing widget's width: the label's own is
+        # "Ignored", so it reflects no useful limit.
+        available = max(self.width() - 90, 120)
 
         self.label_folder.setText(
-            f"Carpeta: {metrics.elidedText(completa, Qt.TextElideMode.ElideMiddle, disponible)}"
+            f"Carpeta: {metrics.elidedText(full, Qt.TextElideMode.ElideMiddle, available)}"
         )
-        self.label_folder.setToolTip(completa)
+        self.label_folder.setToolTip(full)
 
     def _browse_output(self) -> None:
-        actual = self.destination or self._directory or Path.home()
+        current = self.destination or self._directory or Path.home()
         filename, _ = QFileDialog.getSaveFileName(
-            self, "Guardar PDF como", str(actual), "Documentos PDF (*.pdf)"
+            self, "Guardar PDF como", str(current), "Documentos PDF (*.pdf)"
         )
 
         if filename:

@@ -11,15 +11,16 @@ MACOS = "darwin"
 
 class AppDirectories:
     """
-    Resuelve dónde guardar los datos del usuario según el sistema operativo.
+    Resolves where to keep the user's data, per operating system.
 
     - Windows: %APPDATA%\\Kobun
     - macOS:   ~/Library/Application Support/Kobun
-    - Linux y otros: convención XDG, respetando XDG_CONFIG_HOME y XDG_DATA_HOME
+    - Linux and others: the XDG convention, honouring XDG_CONFIG_HOME and
+      XDG_DATA_HOME
 
-    `platform` y `environ` se inyectan para poder verificar las tres
-    plataformas desde cualquier máquina: si no, las rutas de Windows y macOS
-    quedarían sin tests hasta que alguien las ejecute allí.
+    `platform` and `environ` are injected so all three platforms can be
+    verified from any machine: otherwise the Windows and macOS paths would go
+    untested until someone runs them there.
     """
 
     def __init__(
@@ -47,7 +48,7 @@ class AppDirectories:
     @property
     def config_dir(self) -> Path:
         """
-        Preferencias del usuario: tema elegido, últimas opciones.
+        User preferences: chosen theme, last options used.
         """
         if self.is_windows:
             return self._windows_roaming_dir()
@@ -60,10 +61,10 @@ class AppDirectories:
     @property
     def data_dir(self) -> Path:
         """
-        Datos generados por la app, como el historial de exportaciones.
+        Data the app generates, such as the export history.
 
-        En Windows y macOS coincide con `config_dir`: esas plataformas no
-        distinguen configuración de datos como sí hace XDG.
+        On Windows and macOS this matches `config_dir`: those platforms do not
+        separate configuration from data the way XDG does.
         """
         if self.is_windows:
             return self._windows_roaming_dir()
@@ -81,16 +82,16 @@ class AppDirectories:
 
     def ensure_config_dir(self) -> Path:
         """
-        Crea el directorio de configuración si falta y devuelve su ruta.
+        Creates the configuration directory if missing and returns its path.
         """
         return self._ensure(self.config_dir)
 
     def ensure_data_dir(self) -> Path:
         """
-        Crea el directorio de datos si falta y devuelve su ruta.
+        Creates the data directory if missing and returns its path.
 
-        La creación es explícita y no un efecto secundario de leer la
-        propiedad: consultar dónde irían los datos no debería tocar el disco.
+        Creating it is explicit and not a side effect of reading the property:
+        asking where data would go should not touch the disk.
         """
         return self._ensure(self.data_dir)
 
@@ -109,8 +110,8 @@ class AppDirectories:
 
     def _xdg_dir(self, variable: str, fallback: Path) -> Path:
         """
-        La especificación XDG exige ignorar el valor si no es una ruta
-        absoluta, cosa que ocurre con variables mal seteadas.
+        The XDG specification requires ignoring the value when it is not an
+        absolute path, which happens with badly set variables.
         """
         value = self._environ.get(variable)
         base = Path(value) if value and Path(value).is_absolute() else fallback

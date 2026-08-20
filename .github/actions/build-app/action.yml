@@ -1,0 +1,39 @@
+name: Build the executable
+description: Builds the binary for the host system, the .deb on Linux, and checks the output is usable.
+
+inputs:
+  artifact:
+    description: Expected binary name in dist/ (kobun or kobun.exe)
+    required: true
+  minimum-size-mb:
+    description: A binary smaller than this means something was left out of the bundle
+    required: false
+    default: "40"
+
+runs:
+  using: composite
+  steps:
+    - name: Build
+      shell: bash
+      run: python scripts/build_app.py
+
+    - name: Package the .deb
+      if: runner.os == 'Linux'
+      shell: bash
+      run: python scripts/build_deb.py
+
+    - name: Check the output exists and has a sane size
+      shell: python
+      run: |
+        import sys
+        from pathlib import Path
+
+        binary = Path("dist") / "${{ inputs.artifact }}"
+        if not binary.is_file():
+            sys.exit(f"{binary} was not produced")
+
+        mb = binary.stat().st_size / 1024 / 1024
+        print(f"{binary}: {mb:.0f} MB")
+
+        if mb < ${{ inputs.minimum-size-mb }}:
+            sys.exit(f"Suspiciously small ({mb:.0f} MB): dependencies are missing")

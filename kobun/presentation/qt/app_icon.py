@@ -5,19 +5,19 @@ from kobun.shared.config.app_settings import APP_ICON_SIZES, app_icon_file
 
 def load_app_icon() -> QIcon:
     """
-    Icono de la aplicación con todos sus tamaños.
+    The application icon with all of its sizes.
 
-    Se agregan uno por uno en lugar de cargar sólo el más grande: Qt elige el
-    más cercano al contexto donde lo dibuja, y a 16 píxeles reducir desde un
-    PNG hecho para ese tamaño se ve bastante mejor que reducir desde 256.
+    They are added one by one instead of loading only the largest: Qt picks the
+    one closest to the context it draws in, and at 16 pixels shrinking a PNG
+    made for that size looks considerably better than shrinking from 256.
 
-    Un tamaño que falte se omite; el icono nunca es motivo para no arrancar.
+    A missing size is skipped; the icon is never a reason not to start.
     """
     icon = QIcon()
 
     for size in APP_ICON_SIZES:
-        ruta = app_icon_file(size)
-        if ruta.exists():
-            icon.addFile(str(ruta))
+        path = app_icon_file(size)
+        if path.exists():
+            icon.addFile(str(path))
 
     return icon

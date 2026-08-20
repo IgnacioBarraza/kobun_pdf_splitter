@@ -1,0 +1,54 @@
+name: ci
+
+# branches-ignore filters the push event only: a pull request into develop still
+# runs, through the pull_request trigger. Pushes to main and develop are covered
+# by release.yml, which calls the same suite before versioning.
+on:
+  pull_request:
+  push:
+    branches-ignore: [main, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  QT_QPA_PLATFORM: offscreen
+
+jobs:
+  tests:
+    uses: ./.github/workflows/tests.yml
+
+  build:
+    name: build ${{ matrix.name }}
+    needs: tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: linux
+            artifact: kobun
+          - os: windows-latest
+            name: windows
+            artifact: kobun.exe
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/python-env
+        with:
+          extras: build
+
+      - uses: ./.github/actions/build-app
+        with:
+          artifact: ${{ matrix.artifact }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kobun-${{ matrix.name }}
+          path: dist/${{ matrix.artifact }}
+          retention-days: 30
+          if-no-files-found: error

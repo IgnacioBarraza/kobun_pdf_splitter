@@ -20,10 +20,10 @@ _PDF_SUFFIX = ".pdf"
 
 class PyMuPdfRepository(PdfRepository):
     """
-    Implementación de PdfRepository sobre PyMuPDF, vía PdfEngineAdapter.
+    PdfRepository implementation over PyMuPDF, through PdfEngineAdapter.
 
-    Actúa como puente entre el dominio (PdfDocument, PageSelection) y el motor
-    de PDFs. Todos los índices de página que recibe son 1-based.
+    It bridges the domain (PdfDocument, PageSelection) and the PDF engine.
+    Every page index it receives is 1-based.
     """
 
     def __init__(self, engine: PdfEngineAdapter):
@@ -50,11 +50,11 @@ class PyMuPdfRepository(PdfRepository):
 
     def _validate_source_file(self, file_path: Path) -> None:
         """
-        Comprobaciones baratas antes de invocar al motor.
+        Cheap checks before calling the engine.
 
-        Importan sobre todo para el drag & drop, que puede soltar directorios,
-        imágenes o archivos vacíos: sin esto, el primer error visible sería una
-        excepción cruda de PyMuPDF.
+        They matter most for drag & drop, which can drop directories, images or
+        empty files: without them, the first visible error would be a raw
+        PyMuPDF exception.
         """
         if not file_path.exists():
             raise PdfNotFoundException(f"No se encuentra el archivo: {file_path}")
@@ -72,9 +72,9 @@ class PyMuPdfRepository(PdfRepository):
 
     def _open_engine_document(self, file_path: Path) -> Document:
         """
-        Punto único de apertura: valida el archivo y traduce cualquier fallo
-        del motor a una excepción de dominio, de forma que ninguna capa
-        superior tenga que conocer los errores de PyMuPDF.
+        The single point of opening: it validates the file and translates any
+        engine failure into a domain exception, so no layer above has to know
+        PyMuPDF's errors.
         """
         self._validate_source_file(file_path)
 
@@ -109,17 +109,16 @@ class PyMuPdfRepository(PdfRepository):
         """
         Builds a PdfDocument entity from a file path.
 
-        La metadata del archivo puede venir vacía o incompleta. Los campos
-        obligatorios se completan con valores por defecto y el resto se
-        normaliza a None: PdfMetadata rechaza strings vacíos, y PyMuPDF
-        devuelve "" para las claves ausentes.
+        A file's metadata can arrive empty or incomplete. Mandatory fields get
+        defaults and the rest is normalised to None: PdfMetadata rejects empty
+        strings, and PyMuPDF returns "" for absent keys.
 
-        `creationDate` se ignora a propósito: viene en formato PDF
-        ("D:20260804120000Z") y aún no hay parser hacia datetime.
+        `creationDate` is ignored on purpose: it comes in PDF format
+        ("D:20260804120000Z") and there is no parser to datetime yet.
 
-        El título de respaldo usa el nombre **sin extensión**: es un título de
-        documento, no un nombre de archivo, y arrastrar el ".pdf" terminaba
-        produciendo títulos como "contrato.pdf (3-6)" en lo exportado.
+        The fallback title uses the name **without its extension**: it is a
+        document title, not a filename, and dragging the ".pdf" along ended up
+        producing titles like "contrato.pdf (3-6)" in what was exported.
         """
         doc = self._open_engine_document(file_path)
 
@@ -150,7 +149,8 @@ class PyMuPdfRepository(PdfRepository):
     @staticmethod
     def _to_engine_metadata(metadata: PdfMetadata) -> Dict[str, Optional[str]]:
         """
-        Traduce el Value Object de dominio al diccionario que espera el motor.
+        Translates the domain Value Object into the dictionary the engine
+        expects.
         """
         return {
             "title": metadata.title,
@@ -169,12 +169,12 @@ class PyMuPdfRepository(PdfRepository):
         metadata: Optional[PdfMetadata] = None,
     ) -> PdfDocument:
         """
-        Ejecuta una operación de derivación (split, extract, merge) y persiste
-        el resultado, garantizando que ambos documentos se cierren.
+        Runs a derivation (split, extract, merge) and persists the result,
+        guaranteeing both documents get closed.
 
-        `new_doc` se inicializa en None a propósito: si `build` falla, el
-        `finally` no debe romperse con UnboundLocalError y enmascarar el
-        error real del motor.
+        `new_doc` starts as None on purpose: if `build` fails, the `finally`
+        must not break with UnboundLocalError and mask the engine's real
+        error.
         """
         source = self._open_engine_document(source_path)
         new_doc: Optional[Document] = None
@@ -199,9 +199,9 @@ class PyMuPdfRepository(PdfRepository):
 
     def open_document(self, file_path: Path) -> PdfDocument:
         """
-        :raises PdfNotFoundException: Si la ruta no existe.
-        :raises EncryptedPdfException: Si el PDF pide contraseña.
-        :raises InvalidPdfException: Si no es un PDF legible o no tiene páginas.
+        :raises PdfNotFoundException: If the path does not exist.
+        :raises EncryptedPdfException: If the PDF asks for a password.
+        :raises InvalidPdfException: If it is not a readable PDF or has no pages.
         """
         return self._build_pdf_document(file_path)
 

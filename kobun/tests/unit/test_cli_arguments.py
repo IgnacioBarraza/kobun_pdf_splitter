@@ -28,15 +28,15 @@ def test_non_pdf_arguments_are_ignored():
 
 def test_the_first_pdf_wins_when_several_are_passed():
     """Igual que en el drag & drop: la pantalla trabaja sobre un documento."""
-    resultado = first_pdf_argument(["main.py", "uno.pdf", "dos.pdf"])
+    result = first_pdf_argument(["main.py", "uno.pdf", "dos.pdf"])
 
-    assert resultado == Path("uno.pdf")
+    assert result == Path("uno.pdf")
 
 
 def test_a_pdf_after_other_files_is_still_found():
-    resultado = first_pdf_argument(["main.py", "notas.txt", "libro.pdf"])
+    result = first_pdf_argument(["main.py", "notas.txt", "libro.pdf"])
 
-    assert resultado == Path("libro.pdf")
+    assert result == Path("libro.pdf")
 
 
 def test_qt_flags_are_not_mistaken_for_files():
@@ -46,9 +46,9 @@ def test_qt_flags_are_not_mistaken_for_files():
 
 
 def test_a_pdf_alongside_qt_flags_is_still_found():
-    resultado = first_pdf_argument(["main.py", "--platform", "offscreen", "libro.pdf"])
+    result = first_pdf_argument(["main.py", "--platform", "offscreen", "libro.pdf"])
 
-    assert resultado == Path("libro.pdf")
+    assert result == Path("libro.pdf")
 
 
 def test_blank_arguments_are_ignored():
@@ -56,14 +56,14 @@ def test_blank_arguments_are_ignored():
 
 
 def test_paths_with_spaces_survive():
-    resultado = first_pdf_argument(["main.py", "/home/x/manual de prueba.pdf"])
+    result = first_pdf_argument(["main.py", "/home/x/manual de prueba.pdf"])
 
-    assert resultado == Path("/home/x/manual de prueba.pdf")
+    assert result == Path("/home/x/manual de prueba.pdf")
 
 
 def test_existence_is_not_checked_here():
     """
-    Validar que sea legible es tarea de LoadPdfUseCase; acá sólo se decide si
-    el argumento parece un documento.
+    Validating that it is readable is LoadPdfUseCase's job; here we only
+    decide whether the argument looks like a document.
     """
     assert first_pdf_argument(["main.py", "/no/existe.pdf"]) == Path("/no/existe.pdf")

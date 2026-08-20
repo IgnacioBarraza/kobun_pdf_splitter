@@ -1,5 +1,5 @@
 """
-Catálogo de temas incluidos con la aplicación.
+Catalogue of the themes shipped with the application.
 """
 from pathlib import Path
 from typing import Tuple
@@ -10,33 +10,33 @@ LIGHT_THEME = "light"
 DARK_THEME = "dark"
 
 AVAILABLE_THEMES: Tuple[str, ...] = (
-    # Claros
+    # Light
     LIGHT_THEME,
     "washi_shu",
     "ai_indigo",
     "matcha",
     "sumi",
-    # Oscuros
+    # Dark
     DARK_THEME,
     "yozora",
     "kuro",
     "take",
     "murasaki",
 )
-"""Temas que el usuario puede elegir, en el orden en que se listan.
+"""Themes the user can choose from, in listing order.
 
-Van los claros primero y los oscuros después: el selector los agrupa por
-luminancia del fondo, no por este orden, pero listarlos así evita que la lista
-salte de un grupo a otro.
+Light ones first, dark ones after: the selector groups them by background
+luminance rather than by this order, but listing them this way keeps the list
+from jumping between groups.
 
-El nombre para mostrar lo declara cada JSON en su campo `label`."""
+Each JSON declares its own display name in its `label` field."""
 
 
 def theme_file(name: str) -> Path:
     """
-    Ruta del JSON de un tema incluido.
+    Path to a shipped theme's JSON.
 
-    :param name: Nombre del tema, sin extensión.
+    :param name: Theme name, without extension.
     """
     return THEMES_DIRECTORY / f"{name}.json"
 

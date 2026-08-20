@@ -1,0 +1,44 @@
+name: Python environment with Qt
+description: Sets up Python, the system libraries Qt links against, and the project itself.
+
+inputs:
+  python-version:
+    description: Python version
+    required: false
+    default: "3.12"
+  extras:
+    description: pip extra to install (dev, build or release)
+    required: true
+  qt-runtime:
+    description: >
+      Also install the libraries Qt needs to open a window. Only the tests need
+      them; adding them to a build job would change what PyInstaller bundles.
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+        cache: pip
+
+    - name: System libraries for Qt
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends \
+          libegl1 libgl1 libxkbcommon-x11-0 libdbus-1-3
+
+    - name: Libraries to run the interface
+      if: runner.os == 'Linux' && inputs.qt-runtime == 'true'
+      shell: bash
+      run: |
+        sudo apt-get install -y --no-install-recommends \
+          libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-shape0
+
+    - name: Install the project
+      shell: bash
+      run: pip install -e ".[${{ inputs.extras }}]"

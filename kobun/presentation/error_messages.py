@@ -1,16 +1,16 @@
 """
-Traducción de excepciones a mensajes para el usuario.
+Translating exceptions into messages for the user.
 
-Separa dos cosas que no deben confundirse:
+It separates two things that must not be confused:
 
-- **Errores esperados**: el usuario pidió algo que no se puede hacer. Se
-  muestran tal cual, la aplicación sigue andando.
-- **Errores inesperados**: un bug nuestro. Se muestra un texto genérico y el
-  detalle queda para el log, porque un traceback en pantalla no le sirve a
-  nadie y tragarse la excepción en silencio es peor.
+- **Expected errors**: the user asked for something that cannot be done. They
+  are shown as they are, and the application keeps running.
+- **Unexpected errors**: a bug of ours. A generic text is shown and the detail
+  is kept for the log, because a traceback on screen helps nobody and
+  swallowing the exception silently is worse.
 
-Esta distinción es posible porque el dominio garantiza que sólo deja escapar
-sus propias excepciones; cualquier otra cosa es, por definición, un bug.
+This distinction is possible because the domain guarantees it only lets its own
+exceptions escape; anything else is, by definition, a bug.
 """
 from dataclasses import dataclass
 from typing import Dict, Optional, Type
@@ -32,8 +32,8 @@ UNEXPECTED_ERROR_MESSAGE = (
     "Ocurrió un error inesperado. Si vuelve a pasar, reportalo con el detalle técnico."
 )
 
-# Errores que el usuario puede provocar y corregir. El orden no importa: la
-# búsqueda es por tipo exacto y luego por herencia.
+# Errors the user can cause and fix. The order does not matter: the lookup is
+# by exact type first and then by inheritance.
 EXPECTED_ERRORS = (
     PdfNotFoundException,
     EncryptedPdfException,
@@ -45,8 +45,8 @@ EXPECTED_ERRORS = (
     InvalidExportRecordException,
 )
 
-# Textos que reemplazan al mensaje del dominio cuando la UI quiere otro tono.
-# Lo que no esté acá usa el mensaje original, que ya es legible.
+# Texts that replace the domain's message when the UI wants a different tone.
+# Anything not here uses the original message, which is already readable.
 _OVERRIDES: Dict[Type[Exception], str] = {
     EncryptedPdfException: (
         "El PDF está protegido con contraseña. Quitale la protección e intentá de nuevo."
@@ -56,16 +56,16 @@ _OVERRIDES: Dict[Type[Exception], str] = {
 
 def is_expected(error: Exception) -> bool:
     """
-    True si el error es parte del uso normal de la aplicación y no un bug.
+    True if the error is part of the application's normal use and not a bug.
     """
     return isinstance(error, EXPECTED_ERRORS)
 
 
 def translate(error: Exception) -> str:
     """
-    Mensaje a mostrarle al usuario.
+    The message to show the user.
 
-    :param error: Excepción capturada en la capa de presentación.
+    :param error: The exception caught in the presentation layer.
     """
     if not is_expected(error):
         return UNEXPECTED_ERROR_MESSAGE
@@ -79,8 +79,7 @@ def translate(error: Exception) -> str:
 
 def technical_detail(error: Exception) -> str:
     """
-    Detalle para el log o para un panel de "ver más". Nunca es el mensaje
-    principal.
+    Detail for the log or for a "see more" panel. Never the main message.
     """
     return f"{type(error).__name__}: {error}"
 
@@ -92,10 +91,11 @@ UNEXPECTED_TITLE = "Error inesperado"
 @dataclass(frozen=True)
 class ErrorPrompt:
     """
-    Qué mostrar en un diálogo de error, decidido sin depender de Qt.
+    What to show in an error dialog, decided without depending on Qt.
 
-    Separar la decisión de la presentación permite testear la política —qué
-    título, qué ícono, si se ofrece detalle técnico— sin abrir ventanas.
+    Separating the decision from the presentation makes the policy testable
+    —which title, which icon, whether technical detail is offered— without
+    opening windows.
     """
 
     title: str
@@ -106,11 +106,11 @@ class ErrorPrompt:
 
 def build_error_prompt(error: Exception) -> ErrorPrompt:
     """
-    Traduce una excepción al contenido de su diálogo.
+    Translates an exception into the contents of its dialog.
 
-    Los errores esperados son advertencias con el mensaje ya listo. Los
-    inesperados son críticos y llevan el detalle técnico aparte, para que el
-    usuario pueda copiarlo al reportar sin tener que leerlo.
+    Expected errors are warnings whose message is already good to go.
+    Unexpected ones are critical and carry the technical detail separately, so
+    the user can copy it when reporting without having to read it.
     """
     expected = is_expected(error)
 

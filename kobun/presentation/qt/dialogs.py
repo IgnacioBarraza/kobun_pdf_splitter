@@ -7,11 +7,11 @@ CONFIRM_TITLE = "Confirmar"
 
 def show_error(parent: QWidget, error: Exception) -> None:
     """
-    Muestra un error en un diálogo modal.
+    Shows an error in a modal dialog.
 
-    Se usa para lo que interrumpe al usuario —una carga o una exportación que
-    falló—, no para avisos secundarios: esos siguen yendo a la barra de
-    estado, que no exige un clic para seguir trabajando.
+    Used for what interrupts the user —a failed load or export— and not for
+    secondary notices: those still go to the status bar, which does not demand
+    a click to keep working.
     """
     prompt = error_messages.build_error_prompt(error)
 
@@ -24,8 +24,8 @@ def show_error(parent: QWidget, error: Exception) -> None:
     box.setStandardButtons(QMessageBox.StandardButton.Ok)
 
     if prompt.detail:
-        # Plegado por defecto: el usuario puede copiarlo para reportar sin
-        # tener que leerlo para entender qué pasó.
+        # Folded by default: the user can copy it for a report without having
+        # to read it to understand what happened.
         box.setDetailedText(prompt.detail)
 
     box.exec()
@@ -33,9 +33,9 @@ def show_error(parent: QWidget, error: Exception) -> None:
 
 def ask_confirmation(parent: QWidget, question: str, accept_text: str = "Continuar") -> bool:
     """
-    Pide confirmación antes de una acción sin vuelta atrás.
+    Asks for confirmation before an action with no way back.
 
-    :return: True si el usuario aceptó.
+    :return: True if the user accepted.
     """
     box = QMessageBox(parent)
     box.setWindowTitle(CONFIRM_TITLE)

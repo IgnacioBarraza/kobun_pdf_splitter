@@ -56,8 +56,8 @@ def test_split_metadata_derives_from_source(service, make_pdf_document):
 
 def test_split_metadata_falls_back_to_filename_without_its_extension(service, make_pdf_document):
     """
-    El título es un título de documento, no un nombre de archivo: arrastrar el
-    ".pdf" producía cosas como "contrato.pdf (3-6)" en lo exportado.
+    The title is a document title, not a filename: dragging the ".pdf" along
+    produced things like "contrato.pdf (3-6)" in what was exported.
     """
     document = make_pdf_document(
         filename="sin_titulo.pdf",
@@ -71,7 +71,7 @@ def test_split_metadata_falls_back_to_filename_without_its_extension(service, ma
 
 
 def test_split_metadata_keeps_dots_that_belong_to_the_name(service, make_pdf_document):
-    """Sólo se quita la última extensión, no todo lo que haya después de un punto."""
+    """Only the last extension is dropped, not everything after a dot."""
     document = make_pdf_document(
         filename="2026.03.01_Contrato_Indefinido.pdf",
         metadata=PdfMetadata(author="Ignacio"),
@@ -84,8 +84,8 @@ def test_split_metadata_keeps_dots_that_belong_to_the_name(service, make_pdf_doc
 
 def test_split_metadata_subject_keeps_the_full_filename(service, make_pdf_document):
     """
-    En el subject sí interesa el nombre completo: sirve para identificar el
-    archivo de origen en el disco.
+    In the subject the full name does matter: it serves to identify the source
+    file on disk.
     """
     document = make_pdf_document(filename="contrato.pdf", metadata=PdfMetadata(author="I"))
 
@@ -117,7 +117,7 @@ def test_suggested_filename_replaces_commas_with_underscores(service, make_pdf_d
 
 
 def test_suggested_filename_uses_canonical_selection(service, make_pdf_document):
-    """Rangos solapados se fusionan antes de nombrar, así que "1-5,3-8" da "1-8"."""
+    """Overlapping ranges merge before naming, so "1-5,3-8" yields "1-8"."""
     document = make_pdf_document(filename="book.pdf")
 
     assert service.suggest_output_filename(document, PageSelection.parse("1-5,3-8")) == "book_1-8.pdf"
@@ -128,8 +128,8 @@ def test_suggested_filename_strips_filesystem_hostile_characters(service, make_p
 
     result = service.suggest_output_filename(document, PageSelection.parse("3"))
 
-    # Cada carácter inválido se reemplaza por uno "_", sin colapsar repeticiones:
-    # así el nombre resultante sigue siendo predecible a partir del original.
+    # Every invalid character becomes one "_", with no collapsing of runs: that
+    # keeps the resulting name predictable from the original.
     assert result == "re_porte _final___3.pdf"
     assert not set(result) & set('<>:"/\\|?*')
 

@@ -5,8 +5,8 @@ from PySide6.QtCore import QObject, QRunnable, Signal, Slot
 
 class WorkerSignals(QObject):
     """
-    Las señales viven en un QObject aparte porque QRunnable no es un QObject
-    y no puede emitirlas por sí mismo.
+    The signals live in a separate QObject because QRunnable is not a QObject
+    and cannot emit them itself.
     """
 
     finished = Signal(object)
@@ -15,17 +15,17 @@ class WorkerSignals(QObject):
 
 class Worker(QRunnable):
     """
-    Ejecuta una función en el pool de hilos de Qt y devuelve el resultado por
-    señal.
+    Runs a function on Qt's thread pool and returns the result through a
+    signal.
 
-    Existe porque el hilo principal de Qt es el que repinta la ventana:
-    cualquier tarea lenta que corra ahí congela la interfaz. Abrir un PDF
-    grande implica leerlo entero para calcular su checksum, y partirlo puede
-    tardar segundos, así que ambas cosas van al pool.
+    It exists because Qt's main thread is the one repainting the window: any
+    slow task running there freezes the interface. Opening a large PDF means
+    reading all of it to compute its checksum, and splitting one can take
+    seconds, so both go to the pool.
 
-    Regla que no se rompe: el trabajo nunca toca widgets. Devuelve datos por
-    `finished` o la excepción por `failed`, y los slots —que corren en el hilo
-    principal— son los únicos que actualizan la pantalla.
+    The rule that never breaks: the work never touches widgets. It returns data
+    through `finished` or the exception through `failed`, and the slots —which
+    run on the main thread— are the only things that update the screen.
     """
 
     def __init__(self, operation: Callable[..., Any], *args: Any, **kwargs: Any):
