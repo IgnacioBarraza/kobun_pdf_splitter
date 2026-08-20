@@ -7,7 +7,7 @@ from kobun.shared.config.app_settings import DEFAULT_THEME_NAME
 @dataclass(frozen=True)
 class AppPreferences:
     """
-    Preferencias del usuario que sobreviven al cierre de la aplicación.
+    User preferences that survive closing the application.
     """
 
     theme_name: str = DEFAULT_THEME_NAME
@@ -18,11 +18,11 @@ class AppPreferences:
 
 class PreferencesRepository(ABC):
     """
-    Persistencia de las preferencias.
+    Persistence of the preferences.
 
-    `load` nunca falla: unas preferencias ilegibles se reemplazan por los
-    valores por defecto. Que la app no arranque porque el usuario tiene un
-    JSON corrupto sería peor que perder su elección de tema.
+    `load` never fails: unreadable preferences are replaced by the defaults.
+    The app refusing to start because the user has a corrupt JSON would be
+    worse than losing their theme choice.
     """
 
     @abstractmethod

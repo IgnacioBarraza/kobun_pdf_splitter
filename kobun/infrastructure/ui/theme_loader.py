@@ -11,23 +11,23 @@ class ThemeLoader:
     @staticmethod
     def load_from_json(path: Path) -> AppTheme:
         """
-        Lee un archivo JSON y lo convierte en una instancia de AppTheme.
+        Reads a JSON file and turns it into an AppTheme instance.
 
-        :param path: Ruta al archivo .json del tema.
-        :return: Instancia inmutable de AppTheme.
-        :raises FileNotFoundError: Si el archivo no existe.
-        :raises ValueError: Si el JSON tiene un formato inválido.
+        :param path: Path to the theme's .json file.
+        :return: An immutable AppTheme instance.
+        :raises FileNotFoundError: If the file does not exist.
+        :raises ValueError: If the JSON is malformed.
         """
         if not path.exists():
-            raise FileNotFoundError(f"No se encontró el archivo de tema en: {path}")
+            raise FileNotFoundError(f"No theme file found at: {path}")
 
         try:
             with open(path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
 
-            # Validamos la estructura mínima antes de instanciar
+            # Check the minimum structure before instantiating
             if not isinstance(data, dict):
-                raise ValueError("El archivo de tema debe ser un objeto JSON válido.")
+                raise ValueError("A theme file must be a valid JSON object.")
 
             return AppTheme(
                 name=data.get("name", "unknown"),
@@ -35,14 +35,14 @@ class ThemeLoader:
                 label=data.get("label")
             )
         except json.JSONDecodeError as e:
-            raise ValueError(f"Error de formato en el JSON del tema: {str(e)}")
+            raise ValueError(f"Malformed JSON in the theme file: {str(e)}")
         except Exception as e:
-            raise Exception(f"Error inesperado al cargar el tema: {str(e)}")
+            raise Exception(f"Unexpected error while loading the theme: {str(e)}")
 
     @staticmethod
     def save_to_json(theme: AppTheme, path: Path) -> None:
         """
-        Permite exportar un tema a JSON (útil para el futuro editor de temas).
+        Exports a theme to JSON (useful for the future theme editor).
         """
         data = {
             "name": theme.name,
@@ -55,7 +55,7 @@ class ThemeLoader:
 
 class JsonThemeSource(ThemeSource):
     """
-    Temas leídos de los JSON que se distribuyen con la aplicación.
+    Themes read from the JSON files shipped with the application.
     """
 
     def __init__(self, directory: Optional[Path] = None):

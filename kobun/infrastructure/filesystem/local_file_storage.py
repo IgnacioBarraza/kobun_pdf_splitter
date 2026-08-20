@@ -8,8 +8,8 @@ from kobun.application.interfaces.file_storage import FileStorage
 from kobun.domain.pdf.exceptions.file_open_exception import FileOpenException
 from kobun.domain.pdf.exceptions.invalid_output_path_exception import InvalidOutputPathException
 
-# Tope defensivo para la búsqueda de nombre libre: si hay 999 variantes
-# ocupadas, algo está mal en el flujo y es mejor fallar que iterar sin fin.
+# Defensive cap on the search for a free name: with 999 variants taken,
+# something is wrong upstream and failing beats looping forever.
 _MAX_RENAME_ATTEMPTS = 999
 
 WINDOWS = "win32"
@@ -21,11 +21,12 @@ LINUX_OPENER = "xdg-open"
 
 class LocalFileStorage(FileStorage):
     """
-    Implementación de FileStorage sobre el sistema de archivos local.
+    FileStorage implementation over the local filesystem.
 
-    `platform` y `spawn` se inyectan por el mismo motivo que en
-    AppDirectories: permiten verificar el comando de apertura de las tres
-    plataformas sin lanzar procesos ni depender del sistema donde corre el test.
+    `platform` and `spawn` are injected for the same reason as in
+    AppDirectories: they allow verifying the open command of all three
+    platforms without spawning processes or depending on the system the test
+    runs on.
     """
 
     def __init__(
@@ -98,10 +99,10 @@ class LocalFileStorage(FileStorage):
 
     def open_command(self, path: Path) -> List[str]:
         """
-        Comando que lanza el visor predeterminado en sistemas tipo Unix.
+        The command that launches the default viewer on Unix-like systems.
 
-        Windows no usa un comando sino la API del sistema, así que allí este
-        método no se invoca.
+        Windows uses the system API rather than a command, so this method is
+        not called there.
         """
         opener = MACOS_OPENER if self.is_macos else LINUX_OPENER
 
@@ -110,7 +111,7 @@ class LocalFileStorage(FileStorage):
     @staticmethod
     def _start_file(path: Path) -> None:
         """
-        `os.startfile` sólo existe en Windows, por eso se resuelve en runtime.
+        `os.startfile` only exists on Windows, hence the runtime lookup.
         """
         starter = getattr(os, "startfile", None)
         if starter is None:
@@ -121,12 +122,12 @@ class LocalFileStorage(FileStorage):
     @staticmethod
     def _spawn_detached(command: Sequence[str]) -> None:
         """
-        Lanza el visor sin esperarlo: la app no debe quedar bloqueada mientras
-        el usuario lee el PDF.
+        Launches the viewer without waiting for it: the app must not sit
+        blocked while the user reads the PDF.
 
-        Sólo detecta fallos inmediatos, como que `xdg-open` no esté instalado.
-        Si el lanzador arranca pero después no encuentra visor asociado, eso
-        ocurre en otro proceso y ya no es observable desde acá.
+        It only catches immediate failures, such as `xdg-open` not being
+        installed. If the launcher starts but then finds no associated viewer,
+        that happens in another process and is no longer observable from here.
         """
         subprocess.Popen(
             list(command),
@@ -137,7 +138,7 @@ class LocalFileStorage(FileStorage):
     @staticmethod
     def _normalize(path: Path) -> Path:
         """
-        Resuelve la ruta sin exigir que exista, para poder comparar rutas
-        relativas ("./book.pdf") con absolutas.
+        Resolves the path without requiring it to exist, so relative paths
+        ("./book.pdf") can be compared against absolute ones.
         """
         return Path(os.path.abspath(os.path.normpath(str(path))))

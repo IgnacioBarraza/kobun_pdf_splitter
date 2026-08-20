@@ -7,12 +7,12 @@ from kobun.domain.pdf.services.pdf_splitter_service import PdfSplitterService
 
 class LoadPdfUseCase:
     """
-    Abre un PDF y garantiza que sea utilizable, para que la UI pueda mostrar
-    su nombre, cantidad de páginas y metadata antes de pedir un rango.
+    Opens a PDF and guarantees it is usable, so the UI can show its name,
+    page count and metadata before asking for a range.
 
-    Es el único punto de entrada para cargar un archivo: tanto el botón de
-    "seleccionar archivo" como el drag & drop deben pasar por aquí, porque es
-    donde se rechazan los archivos que no son PDFs legibles.
+    It is the single entry point for loading a file: both the "pick a file"
+    button and drag & drop have to come through here, because this is where
+    files that are not readable PDFs get rejected.
     """
 
     def __init__(self, pdf_repository: PdfRepository, pdf_service: PdfSplitterService):
@@ -21,11 +21,11 @@ class LoadPdfUseCase:
 
     def execute(self, file_path: Path) -> PdfDocument:
         """
-        :param file_path: Ruta del PDF a cargar.
-        :return: El documento validado y listo para dividirse.
-        :raises PdfNotFoundException: Si la ruta no existe.
-        :raises EncryptedPdfException: Si el PDF pide contraseña.
-        :raises InvalidPdfException: Si no es un PDF legible o no tiene páginas.
+        :param file_path: Path of the PDF to load.
+        :return: The validated document, ready to be split.
+        :raises PdfNotFoundException: If the path does not exist.
+        :raises EncryptedPdfException: If the PDF asks for a password.
+        :raises InvalidPdfException: If it is not a readable PDF or has no pages.
         """
         document = self._pdf_repository.open_document(Path(file_path))
         self._pdf_service.validate_document_for_processing(document)

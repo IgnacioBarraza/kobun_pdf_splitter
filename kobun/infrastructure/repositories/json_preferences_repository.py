@@ -14,10 +14,10 @@ SCHEMA_VERSION = 1
 
 class JsonPreferencesRepository(PreferencesRepository):
     """
-    Preferencias en un JSON dentro del directorio de configuración del usuario.
+    Preferences in a JSON file inside the user's configuration directory.
 
-    Escribe de forma atómica, igual que el historial: una preferencia perdida
-    es trivial, pero un archivo truncado rompería el arranque siguiente.
+    It writes atomically, like the history: a lost preference is trivial, but a
+    truncated file would break the next launch.
     """
 
     def __init__(self, file_path: Path):

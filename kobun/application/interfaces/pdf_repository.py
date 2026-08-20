@@ -10,10 +10,11 @@ from kobun.domain.pdf.value_objects.pdf_metadata import PdfMetadata
 
 class PdfRepository(ABC):
     """
-    Contrato de manipulación de PDFs visto desde el dominio.
+    The PDF manipulation contract as the domain sees it.
 
-    Todos los índices de página son 1-based, igual que en PageRange y en la UI.
-    Cada implementación es responsable de traducirlos al motor que use.
+    Every page index is 1-based, same as in PageRange and in the UI. Each
+    implementation is responsible for translating them to whatever engine it
+    uses.
     """
 
     @abstractmethod
@@ -53,7 +54,7 @@ class PdfRepository(ABC):
         metadata: Optional[PdfMetadata] = None,
     ) -> PdfDocument:
         """
-        Extrae una selección de rangos, posiblemente discontinua, a un nuevo PDF.
+        Extracts a selection of ranges, possibly discontinuous, into a new PDF.
         """
         pass
 

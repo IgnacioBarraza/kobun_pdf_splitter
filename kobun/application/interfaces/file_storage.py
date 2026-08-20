@@ -4,12 +4,12 @@ from pathlib import Path
 
 class FileStorage(ABC):
     """
-    Contrato de acceso al sistema de archivos, para que las capas de
-    aplicación y dominio puedan razonar sobre rutas sin importar `os`.
+    Filesystem access contract, so the application and domain layers can
+    reason about paths without importing `os`.
 
-    Existe para que la política de ruta de salida sea testeable sin tocar
-    disco y para poder sustituirla (por ejemplo, por un almacenamiento
-    remoto) sin cambiar los use cases.
+    It exists to make the output path policy testable without touching disk,
+    and to allow substituting it —for a remote storage, say— without changing
+    the use cases.
     """
 
     @abstractmethod
@@ -27,37 +27,37 @@ class FileStorage(ABC):
     @abstractmethod
     def is_same_file(self, first: Path, second: Path) -> bool:
         """
-        True si ambas rutas apuntan al mismo archivo, resolviendo rutas
-        relativas y enlaces simbólicos.
+        True if both paths point at the same file, resolving relative paths
+        and symbolic links.
         """
         pass
 
     @abstractmethod
     def ensure_writable_directory(self, directory: Path) -> None:
         """
-        Verifica que el directorio exista y admita escritura.
+        Checks the directory exists and accepts writes.
 
-        :raises InvalidOutputPathException: Si no existe, no es un directorio
-            o no hay permiso de escritura.
+        :raises InvalidOutputPathException: If it does not exist, is not a
+            directory, or there is no write permission.
         """
         pass
 
     @abstractmethod
     def unique_path(self, path: Path) -> Path:
         """
-        Devuelve la ruta tal cual si está libre, o la primera variante
-        numerada disponible: book.pdf -> book_1.pdf -> book_2.pdf.
+        Returns the path as is if free, or the first available numbered
+        variant: book.pdf -> book_1.pdf -> book_2.pdf.
         """
         pass
 
     @abstractmethod
     def open_in_default_app(self, path: Path) -> None:
         """
-        Abre el archivo con la aplicación predeterminada del sistema.
+        Opens the file with the system's default application.
 
-        No espera a que esa aplicación termine: sólo la lanza.
+        It does not wait for that application to finish: it only launches it.
 
-        :raises FileOpenException: Si el archivo no existe o el sistema no
-            pudo lanzarlo.
+        :raises FileOpenException: If the file does not exist or the system
+            could not launch it.
         """
         pass

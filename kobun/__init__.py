@@ -1,6 +1,6 @@
-"""Kobun — utilidad de escritorio para dividir PDFs."""
+"""Kobun — desktop utility to split PDFs."""
 
-# La escribe semantic-release al publicar, a partir de los commits: no se edita
-# a mano (ver [tool.semantic_release] en pyproject.toml). Es la misma que lee
-# setuptools y la que la app muestra en su barra lateral.
+# semantic-release writes this when publishing, from the commits: it is not
+# edited by hand (see [tool.semantic_release] in pyproject.toml). It is the same
+# one setuptools reads and the one the app shows in its sidebar.
 __version__ = "0.2.0-alpha.2"

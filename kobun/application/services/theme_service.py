@@ -9,11 +9,12 @@ from kobun.shared.theme import AppTheme
 
 class ThemeService:
     """
-    Resuelve qué tema mostrar, ofrece el catálogo y recuerda la elección.
+    Resolves which theme to show, offers the catalogue and remembers the
+    choice.
 
-    Cargar un tema no falla hacia afuera mientras el tema por defecto siga
-    siendo legible: un JSON roto o un nombre desconocido caen al default. Un
-    color mal puesto no puede dejar la ventana sin dibujar.
+    Loading a theme never fails outwards as long as the default theme stays
+    readable: a broken JSON or an unknown name fall back to it. A mistyped
+    colour cannot be allowed to leave the window undrawn.
     """
 
     def __init__(self, preferences_repository: PreferencesRepository, theme_source: ThemeSource):
@@ -22,38 +23,38 @@ class ThemeService:
 
     def available(self) -> List[AppTheme]:
         """
-        Temas ofrecidos al usuario, en el orden del catálogo.
+        Themes offered to the user, in catalogue order.
 
-        Los que no se puedan cargar se omiten en vez de romper el selector:
-        vale más una lista incompleta que una ventana que no abre.
+        Any that fail to load are skipped rather than breaking the selector: an
+        incomplete list beats a window that does not open.
         """
-        temas = []
+        themes = []
 
         for name in AVAILABLE_THEMES:
             try:
-                temas.append(self._theme_source.load(name))
+                themes.append(self._theme_source.load(name))
             except Exception:
                 continue
 
-        return temas
+        return themes
 
     def current(self) -> AppTheme:
         """
-        Tema guardado por el usuario, o el por defecto en el primer arranque.
+        The theme the user saved, or the default on first launch.
         """
         return self._load(self._preferences_repository.load().theme_name)
 
     def current_name(self) -> str:
         """
-        Nombre del tema activo, para preseleccionar el selector sin tener que
-        cargar la paleta entera.
+        Name of the active theme, to preselect the selector without loading
+        the whole palette.
         """
         return self.current().name
 
     def select(self, theme_name: str) -> AppTheme:
         """
-        Fija un tema por nombre y persiste la elección. Un nombre desconocido
-        cae al por defecto en vez de fallar.
+        Sets a theme by name and persists the choice. An unknown name falls
+        back to the default instead of failing.
         """
         resolved = theme_name if is_known_theme(theme_name) else DEFAULT_THEME_NAME
         theme = self._load(resolved)

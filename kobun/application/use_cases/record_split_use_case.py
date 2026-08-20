@@ -5,11 +5,11 @@ from kobun.domain.history.entities.export_record import ExportRecord
 
 class RecordSplitUseCase:
     """
-    Registra en el historial una exportación ya realizada.
+    Records an export that already happened into the history.
 
-    Está separado de SplitPdfUseCase a propósito: partir un PDF y llevar un
-    historial son responsabilidades distintas, y el split no debería fallar
-    porque el historial no se pueda escribir. La UI encadena ambos.
+    Separated from SplitPdfUseCase on purpose: splitting a PDF and keeping a
+    history are different responsibilities, and the split should not fail
+    because the history cannot be written. The UI chains the two.
     """
 
     def __init__(self, history_repository: HistoryRepository):
@@ -17,8 +17,8 @@ class RecordSplitUseCase:
 
     def execute(self, response: SplitPdfResponse) -> ExportRecord:
         """
-        :param response: Resultado devuelto por SplitPdfUseCase.
-        :return: El registro creado, con su id ya asignado.
+        :param response: The result returned by SplitPdfUseCase.
+        :return: The created record, with its id already assigned.
         """
         record = ExportRecord(
             source_path=response.source_path,

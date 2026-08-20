@@ -10,13 +10,13 @@ _SEPARATORS = (";", " ", "\t", "\n")
 @dataclass(frozen=True, slots=True)
 class PageSelection:
     """
-    Value Object inmutable que representa la selección completa de páginas
-    pedida por el usuario: uno o más rangos, por ejemplo "1-5,10-15,20".
+    Immutable Value Object representing the whole page selection the user
+    asked for: one or more ranges, for example "1-5,10-15,20".
 
-    La selección se guarda siempre en forma canónica: los rangos quedan
-    ordenados y los solapados o contiguos fusionados. Eso hace que dos
-    selecciones que representan el mismo conjunto de páginas sean iguales
-    ("1-5,3-8" == "1-8") y que la extracción nunca duplique una página.
+    The selection is always kept in canonical form: ranges end up sorted, and
+    overlapping or contiguous ones merged. That makes two selections
+    representing the same set of pages equal ("1-5,3-8" == "1-8") and keeps
+    extraction from ever duplicating a page.
     """
     ranges: Tuple[PageRange, ...]
 
@@ -42,11 +42,11 @@ class PageSelection:
     @classmethod
     def parse(cls, text: str) -> "PageSelection":
         """
-        Construye una selección desde texto: "1-5,10-15", "7", "1-3; 8".
+        Builds a selection from text: "1-5,10-15", "7", "1-3; 8".
 
-        Acepta coma, punto y coma o espacios como separadores.
+        Accepts commas, semicolons or spaces as separators.
 
-        :raises InvalidPageRangeException: Si el texto está vacío o algún rango es inválido.
+        :raises InvalidPageRangeException: If the text is empty or any range is invalid.
         """
         normalized = text.strip()
         for separator in _SEPARATORS:
@@ -60,12 +60,12 @@ class PageSelection:
 
     @classmethod
     def of(cls, *ranges: PageRange) -> "PageSelection":
-        """Azúcar sintáctico para construir una selección desde rangos ya validados."""
+        """Syntactic sugar to build a selection from already validated ranges."""
         return cls(ranges=tuple(ranges))
 
     @property
     def max_page(self) -> int:
-        """Página más alta solicitada. Se usa para validar contra el total del documento."""
+        """Highest page requested. Used to validate against the document total."""
         return self.ranges[-1].end
 
     @property
@@ -74,7 +74,7 @@ class PageSelection:
 
     @property
     def total_pages(self) -> int:
-        """Cantidad real de páginas a extraer, sin duplicados."""
+        """Actual number of pages to extract, with no duplicates."""
         return sum(r.total_pages for r in self.ranges)
 
     @property
@@ -83,7 +83,7 @@ class PageSelection:
 
     def to_pages(self) -> List[int]:
         """
-        Lista de páginas 1-based, ordenada y sin duplicados.
+        Sorted list of 1-based pages, with no duplicates.
         """
         pages: List[int] = []
         for p_range in self.ranges:

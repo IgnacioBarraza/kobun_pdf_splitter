@@ -5,16 +5,16 @@ from kobun.shared.theme import AppTheme
 
 class ThemeSource(ABC):
     """
-    De dónde salen los temas.
+    Where themes come from.
 
-    Existe para que ThemeService no dependa de que los temas vivan en archivos
-    JSON: mañana podrían venir de un editor de temas del usuario o de recursos
-    embebidos en el ejecutable empaquetado.
+    It exists so ThemeService does not depend on themes living in JSON files:
+    tomorrow they could come from a user theme editor or from resources
+    embedded in the frozen executable.
     """
 
     @abstractmethod
     def load(self, theme_name: str) -> AppTheme:
         """
-        :raises Exception: Si el tema no existe o no se puede interpretar.
+        :raises Exception: If the theme does not exist or cannot be parsed.
         """
         pass
