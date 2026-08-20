@@ -25,11 +25,11 @@ CLEAR_HISTORY_QUESTION = (
 
 class MainWindow(QMainWindow):
     """
-    Ventana principal: traduce interacciones a llamadas del viewmodel y
-    señales del viewmodel a cambios visibles.
+    The main window: it turns interactions into viewmodel calls, and viewmodel
+    signals into visible changes.
 
-    No conoce use cases ni excepciones del dominio salvo para pedirle un
-    mensaje a `error_messages`.
+    It knows no use cases and no domain exceptions beyond asking
+    `error_messages` for a message.
     """
 
     def __init__(
@@ -45,8 +45,8 @@ class MainWindow(QMainWindow):
         self._theme_service = theme_service
         self._history_repository = history_repository
 
-        # Inyectables para poder verificar qué diálogo se abre sin que un
-        # modal bloquee la suite de tests esperando un clic.
+        # Injectable so which dialog opens can be verified without a modal
+        # blocking the test suite waiting for a click.
         self._show_error = show_error or dialogs.show_error
         self._ask_confirmation = ask_confirmation or dialogs.ask_confirmation
 
@@ -60,7 +60,7 @@ class MainWindow(QMainWindow):
         self._view_model.refresh_history()
 
     # =========================
-    # Tema
+    # Theme
     # =========================
 
     def apply_theme(self, theme) -> None:
@@ -71,33 +71,33 @@ class MainWindow(QMainWindow):
 
     def _populate_themes(self) -> None:
         """
-        Carga el catálogo y preselecciona el tema activo.
+        Loads the catalogue and preselects the active theme.
 
-        Las señales se bloquean mientras se arma la lista: `setCurrentIndex`
-        emitiría `currentIndexChanged` y volvería a guardar la preferencia
-        durante el arranque, por un cambio que el usuario no hizo.
+        Signals are blocked while the list is built: `setCurrentIndex` would
+        emit `currentIndexChanged` and save the preference again during startup,
+        for a change the user never made.
         """
         combo = self.ui.combo_theme
-        activo = self._theme_service.current().name
+        active = self._theme_service.current().name
 
         combo.blockSignals(True)
         try:
-            grupo_oscuro = False
+            dark_group = False
 
             for theme in self._theme_service.available():
-                # Con muchas paletas conviene separar claros de oscuros: la
-                # agrupación sale de la luminancia del fondo, así que un tema
-                # nuevo cae solo en su grupo.
-                if theme.is_dark and not grupo_oscuro:
+                # With many palettes it helps to separate light from dark: the
+                # grouping comes from the background's luminance, so a new theme
+                # lands in its group on its own.
+                if theme.is_dark and not dark_group:
                     if combo.count():
                         combo.insertSeparator(combo.count())
-                    grupo_oscuro = True
+                    dark_group = True
 
                 combo.addItem(theme.display_name, theme.name)
 
-            indice = combo.findData(activo)
-            if indice >= 0:
-                combo.setCurrentIndex(indice)
+            index = combo.findData(active)
+            if index >= 0:
+                combo.setCurrentIndex(index)
         finally:
             combo.blockSignals(False)
 
@@ -108,7 +108,7 @@ class MainWindow(QMainWindow):
             self.select_theme(str(name))
 
     # =========================
-    # Cableado
+    # Wiring
     # =========================
 
     def _connect(self) -> None:
@@ -133,23 +133,23 @@ class MainWindow(QMainWindow):
         self._view_model.history_changed.connect(self._render_history)
         self._view_model.busy_changed.connect(self._on_busy_changed)
 
-        # Lo que el usuario pidió y falló lo interrumpe con un diálogo.
+        # What the user asked for and failed interrupts them with a dialog.
         self._view_model.load_failed.connect(self._report_blocking_error)
         self._view_model.split_failed.connect(self._report_blocking_error)
 
-        # El historial es secundario: si no se puede escribir o leer, el PDF
-        # ya se generó y un modal sería alarmista.
+        # The history is secondary: if it cannot be written or read, the PDF is
+        # already produced and a modal would be alarmist.
         self._view_model.history_failed.connect(self._report_minor_error)
 
     # =========================
-    # Carga
+    # Loading
     # =========================
 
     def open_document(self, path: Path) -> None:
         """
-        Carga un PDF desde fuera de la ventana: la línea de comandos, o el
-        "Abrir con" del explorador. Reusa el mismo camino que el drag & drop,
-        incluidos su validación y sus mensajes de error.
+        Loads a PDF from outside the window: the command line, or the file
+        manager's "Open with". It reuses the same path as drag & drop, including
+        its validation and its error messages.
         """
         self.ui.pages.setCurrentIndex(SPLIT_PAGE)
         self.ui.btn_split.setChecked(True)
@@ -169,7 +169,7 @@ class MainWindow(QMainWindow):
         self._refresh_actions()
 
     # =========================
-    # División
+    # Splitting
     # =========================
 
     def _on_selection_changed(self, _text: str) -> None:
@@ -212,7 +212,7 @@ class MainWindow(QMainWindow):
             return None
 
     # =========================
-    # Historial
+    # History
     # =========================
 
     def _show_history(self) -> None:
@@ -234,33 +234,33 @@ class MainWindow(QMainWindow):
     @staticmethod
     def _history_label(entry) -> str:
         """
-        La lista muestra sólo el archivo generado: es lo que el usuario busca
-        cuando abre el historial. El origen y los rangos quedan en el tooltip.
+        The list shows only the produced file: that is what the user is after
+        when they open the history. Source and ranges stay in the tooltip.
         """
-        cuando = entry.record.created_at.astimezone().strftime("%d/%m/%Y %H:%M")
-        marca = "" if entry.is_available else "✗ "
+        when = entry.record.created_at.astimezone().strftime("%d/%m/%Y %H:%M")
+        mark = "" if entry.is_available else "✗ "
 
-        return f"{marca}{cuando}   {entry.record.output_filename}"
+        return f"{mark}{when}   {entry.record.output_filename}"
 
     @staticmethod
     def _history_detail(entry) -> str:
         record = entry.record
-        lineas = [
+        lines = [
             f"Origen: {record.source_filename}",
             f"Páginas: {record.selection}  ({record.page_count} en total)",
             f"Ubicación: {record.output_path}",
         ]
 
         if not entry.is_available:
-            lineas.append("El archivo ya no está en esta ubicación.")
+            lines.append("El archivo ya no está en esta ubicación.")
 
-        return "\n".join(lineas)
+        return "\n".join(lines)
 
     def _on_history_selection_changed(self) -> None:
         entry = self._selected_entry()
 
-        # Abrir requiere que el archivo exista; quitar del historial no: es
-        # justamente lo que se quiere hacer con las entradas muertas.
+        # Opening requires the file to exist; removing from the history does
+        # not: that is precisely what one wants to do with dead entries.
         self.ui.btn_open_export.setEnabled(entry is not None and entry.is_available)
         self.ui.btn_forget_export.setEnabled(entry is not None)
 
@@ -286,11 +286,11 @@ class MainWindow(QMainWindow):
 
     def _forget_selected_export(self) -> None:
         """
-        Saca una entrada del historial sin tocar el PDF en disco.
+        Takes an entry out of the history without touching the PDF on disk.
 
-        No pide confirmación: se pierde un registro, no un archivo, y la
-        entrada seleccionada está a la vista. Reservar el diálogo para lo
-        irreversible evita que el usuario aprenda a ignorarlos.
+        It asks for no confirmation: a record is lost, not a file, and the
+        selected entry is in plain sight. Reserving the dialog for what is
+        irreversible keeps the user from learning to dismiss them.
         """
         entry = self._selected_entry()
         if entry is None:
@@ -312,7 +312,7 @@ class MainWindow(QMainWindow):
         self._set_status("Historial vacío.")
 
     # =========================
-    # Estado visual
+    # Visual state
     # =========================
 
     def _on_busy_changed(self, busy: bool) -> None:
@@ -321,18 +321,18 @@ class MainWindow(QMainWindow):
         self._refresh_actions()
 
     def _refresh_actions(self) -> None:
-        listo = (
+        ready = (
             self._view_model.has_document
             and not self._view_model.is_busy
             and self._parse_selection() is not None
         )
-        self.ui.btn_process.setEnabled(listo)
+        self.ui.btn_process.setEnabled(ready)
 
     def _report_blocking_error(self, error: Exception) -> None:
         """
-        Falló algo que el usuario pidió explícitamente: diálogo modal, y el
-        mensaje queda además en la barra de estado como recordatorio de qué
-        pasó una vez cerrado.
+        Something the user explicitly asked for failed: a modal dialog, and
+        the message also stays in the status bar as a reminder of what happened
+        once it is closed.
         """
         self._report_minor_error(error)
         self._show_error(self, error)
@@ -341,8 +341,8 @@ class MainWindow(QMainWindow):
         self._set_status(error_messages.translate(error), error=True)
 
         if not error_messages.is_expected(error):
-            # Un bug nuestro: el usuario ve un mensaje genérico y el detalle
-            # queda visible en consola para poder reportarlo.
+            # A bug of ours: the user sees a generic message and the detail
+            # stays visible on the console so it can be reported.
             print(f"[ERROR INESPERADO] {error_messages.technical_detail(error)}")
 
     def _set_status(self, message: str, error: bool = False, success: bool = False) -> None:
@@ -350,6 +350,6 @@ class MainWindow(QMainWindow):
         label.setText(message)
         label.setObjectName("ErrorText" if error else "SuccessText" if success else "")
 
-        # Cambiar objectName exige recalcular el estilo del widget.
+        # Changing objectName requires recomputing the widget's style.
         label.style().unpolish(label)
         label.style().polish(label)

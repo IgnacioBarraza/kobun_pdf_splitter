@@ -1,7 +1,7 @@
 class InvalidExportRecordException(Exception):
     """
-    El registro de exportación no cumple sus invariantes: le falta origen o
-    destino, no tiene páginas, o la fecha no es utilizable.
+    The export record breaks its invariants: it is missing a source or a
+    destination, has no pages, or its date is unusable.
     """
 
     def __init__(self, message: str):

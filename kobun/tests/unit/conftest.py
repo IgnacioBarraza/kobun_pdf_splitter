@@ -7,8 +7,8 @@ from kobun.domain.pdf.value_objects.pdf_metadata import PdfMetadata
 @pytest.fixture
 def make_pdf_document(tmp_path):
     """
-    Fábrica de entidades PdfDocument respaldadas por un archivo real en disco,
-    para que las validaciones que comprueban existencia del archivo pasen.
+    Factory of PdfDocument entities backed by a real file on disk, so the
+    validations that check for the file's existence pass.
     """
 
     def _make(filename: str = "book.pdf", page_count: int = 100, metadata: PdfMetadata = None) -> PdfDocument:

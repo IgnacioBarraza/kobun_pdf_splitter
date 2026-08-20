@@ -15,18 +15,18 @@ SCHEMA_VERSION = 1
 
 class JsonHistoryRepository(HistoryRepository):
     """
-    Historial persistido en un único archivo JSON.
+    History persisted in a single JSON file.
 
-    Tres decisiones que importan:
+    Three decisions that matter:
 
-    - **Escritura atómica**: se escribe a un temporal y se reemplaza. Si la app
-      muere a mitad de guardar, el historial anterior queda intacto en vez de
-      convertirse en un archivo truncado.
-    - **Tolerancia a corrupción**: el historial es conveniencia, no datos
-      críticos. Un JSON ilegible se aparta con extensión `.corrupt` y se
-      empieza de cero, en lugar de impedir que la aplicación arranque.
-    - **Tolerancia por entrada**: un registro con formato inválido se descarta
-      solo, sin arrastrar al resto de la lista.
+    - **Atomic writes**: it writes to a temporary file and replaces. If the app
+      dies halfway through saving, the previous history stays intact instead of
+      becoming a truncated file.
+    - **Corruption tolerance**: the history is a convenience, not critical
+      data. An unreadable JSON is set aside with a `.corrupt` extension and it
+      starts over, rather than stopping the application from launching.
+    - **Per-entry tolerance**: a malformed record is dropped on its own,
+      without taking the rest of the list down with it.
     """
 
     def __init__(self, file_path: Path, max_entries: int = MAX_HISTORY_ENTRIES):
@@ -62,7 +62,7 @@ class JsonHistoryRepository(HistoryRepository):
         self._file_path.unlink(missing_ok=True)
 
     # =========================
-    # Persistencia
+    # Persistence
     # =========================
 
     def _read_all(self) -> List[ExportRecord]:
@@ -94,8 +94,8 @@ class JsonHistoryRepository(HistoryRepository):
             "entries": [self._serialize(record) for record in records],
         }
 
-        # Temporal en el mismo directorio: os.replace sólo es atómico dentro
-        # del mismo sistema de archivos.
+        # The temporary file goes in the same directory: os.replace is only
+        # atomic within one filesystem.
         temporary = self._file_path.with_name(f"{self._file_path.name}.tmp")
 
         with open(temporary, "w", encoding="utf-8") as handle:
@@ -105,8 +105,8 @@ class JsonHistoryRepository(HistoryRepository):
 
     def _quarantine(self) -> None:
         """
-        Aparta un historial ilegible en vez de borrarlo, por si alguien quiere
-        recuperarlo a mano.
+        Sets an unreadable history aside instead of deleting it, in case
+        someone wants to recover it by hand.
         """
         try:
             self._file_path.replace(self._file_path.with_name(f"{self._file_path.name}.corrupt"))
@@ -114,7 +114,7 @@ class JsonHistoryRepository(HistoryRepository):
             pass
 
     # =========================
-    # Mapeo
+    # Mapping
     # =========================
 
     @staticmethod
@@ -147,5 +147,5 @@ class JsonHistoryRepository(HistoryRepository):
                 title=entry.get("title"),
             )
         except Exception:
-            # Una entrada rota no debe impedir leer las demás.
+            # A broken entry must not stop the others from being read.
             return None

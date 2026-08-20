@@ -10,23 +10,23 @@ CREATOR_NAME = "Kobun PDF Utility"
 PDF_SUFFIX = ".pdf"
 FALLBACK_STEM = "kobun_split"
 
-# Caracteres prohibidos en Windows. Se filtran siempre, no sólo en Windows,
-# para que un PDF exportado en Linux siga siendo copiable a otro sistema.
+# Characters Windows forbids. Filtered always, not only on Windows, so a PDF
+# exported on Linux stays copyable to another system.
 _ILLEGAL_FILENAME_CHARS = frozenset('<>:"/\\|?*')
 
 
 class PdfSplitterService:
     """
-    Servicio de Dominio que centraliza las reglas de negocio del split.
+    Domain Service holding the business rules of splitting.
 
-    No conoce PyMuPDF ni el sistema de archivos más allá de comprobar la
-    existencia del documento: sólo decide qué operaciones son lícitas y
-    cómo debe quedar la metadata del resultado.
+    It knows neither PyMuPDF nor the filesystem beyond checking that the
+    document exists: it only decides which operations are legitimate and what
+    the resulting metadata should look like.
     """
 
     def validate_document_for_processing(self, document: PdfDocument) -> None:
         """
-        Valida si el documento está en un estado que permite su manipulación.
+        Checks the document is in a state that allows manipulation.
         """
         if document.page_count is None or document.page_count <= 0:
             raise InvalidPdfException("El documento no tiene páginas válidas para procesar.")
@@ -36,7 +36,7 @@ class PdfSplitterService:
 
     def validate_selection(self, document: PdfDocument, selection: PageSelection) -> None:
         """
-        Asegura que todas las páginas solicitadas existan dentro del documento.
+        Ensures every requested page exists within the document.
         """
         self.validate_document_for_processing(document)
 
@@ -48,12 +48,12 @@ class PdfSplitterService:
 
     def suggest_output_filename(self, source_doc: PdfDocument, selection: PageSelection) -> str:
         """
-        Nombre de archivo propuesto para el resultado: "book.pdf" + "1-5,10-15"
-        se convierte en "book_1-5_10-15.pdf".
+        Suggested filename for the result: "book.pdf" + "1-5,10-15" becomes
+        "book_1-5_10-15.pdf".
 
-        Es una regla de negocio (así nombra Kobun sus exportaciones), no una
-        decisión de UI, así que vive en el dominio. La UI puede ofrecerlo como
-        default editable en el diálogo de guardado.
+        This is a business rule —how Kobun names its exports— and not a UI
+        decision, so it lives in the domain. The UI can offer it as an editable
+        default in the save dialog.
         """
         stem = self._sanitize_filename(PurePath(source_doc.filename).stem) or FALLBACK_STEM
         suffix = str(selection).replace(",", "_")
@@ -63,8 +63,8 @@ class PdfSplitterService:
     @staticmethod
     def _sanitize_filename(value: str) -> str:
         """
-        Reemplaza caracteres inválidos por "_" y recorta puntos y espacios
-        finales, que Windows tampoco acepta.
+        Replaces invalid characters with "_" and trims trailing dots and
+        spaces, which Windows does not accept either.
         """
         cleaned = "".join(
             "_" if char in _ILLEGAL_FILENAME_CHARS or ord(char) < 32 else char
@@ -74,12 +74,12 @@ class PdfSplitterService:
 
     def prepare_split_metadata(self, source_doc: PdfDocument, selection: PageSelection) -> PdfMetadata:
         """
-        Construye la metadata del PDF resultante derivándola del original,
-        para que el archivo exportado sea trazable hasta su fuente.
+        Builds the resulting PDF's metadata by deriving it from the original,
+        so the exported file is traceable back to its source.
 
-        El título nunca lleva la extensión: es un título de documento, no un
-        nombre de archivo. El `subject` sí conserva el nombre completo, porque
-        ahí lo que importa es poder identificar el archivo de origen.
+        The title never carries the extension: it is a document title, not a
+        filename. The `subject` does keep the full name, because there what
+        matters is being able to identify the source file.
         """
         source_meta = source_doc.metadata
         base = source_meta.title or PurePath(source_doc.filename).stem

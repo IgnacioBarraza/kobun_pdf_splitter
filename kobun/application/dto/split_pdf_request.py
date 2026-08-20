@@ -9,27 +9,27 @@ from kobun.domain.pdf.value_objects.page_selection import PageSelection
 @dataclass(frozen=True)
 class SplitPdfRequest:
     """
-    Todo lo que hace falta para pedir un split.
+    Everything needed to ask for a split.
 
-    Existe para que la UI pueda armar la petición en pasos (el usuario elige
-    archivo, después rangos, después destino) y entregarla como una sola
-    unidad, en vez de que el use case crezca en parámetros sueltos cada vez
-    que aparece una opción nueva.
+    It exists so the UI can assemble the request in steps —the user picks a
+    file, then ranges, then a destination— and hand it over as a single unit,
+    instead of the use case growing loose parameters every time a new option
+    shows up.
     """
 
     input_path: Path
     selection: PageSelection
 
     output_path: Optional[Path] = None
-    """Archivo .pdf de destino o directorio existente. Si es None se usa el
-    nombre sugerido junto al archivo de origen."""
+    """Destination .pdf file or existing directory. None uses the suggested
+    name next to the source file."""
 
     policy: OverwritePolicy = OverwritePolicy.FAIL
-    """Qué hacer si el destino ya está ocupado."""
+    """What to do if the destination is already taken."""
 
     def __post_init__(self) -> None:
-        # Normaliza strings a Path para que la UI pueda pasar lo que reciba del
-        # diálogo de archivos sin convertir a mano.
+        # Normalises strings to Path so the UI can pass whatever the file dialog
+        # gave it without converting by hand.
         object.__setattr__(self, "input_path", Path(self.input_path))
 
         if self.output_path is not None:

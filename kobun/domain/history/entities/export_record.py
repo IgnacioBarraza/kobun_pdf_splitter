@@ -13,11 +13,11 @@ from kobun.domain.pdf.value_objects.page_selection import PageSelection
 @dataclass(frozen=True, slots=True)
 class ExportRecord:
     """
-    Una exportación que efectivamente ocurrió.
+    An export that actually happened.
 
-    Es inmutable: describe un hecho pasado, así que no tiene sentido poder
-    editarlo. Guarda la selección como Value Object y no como texto para que
-    la UI pueda ofrecer "repetir esta exportación" sin volver a parsear.
+    Immutable: it describes a past fact, so being able to edit it makes no
+    sense. It keeps the selection as a Value Object rather than text so the UI
+    can offer "repeat this export" without parsing again.
     """
 
     source_path: Path

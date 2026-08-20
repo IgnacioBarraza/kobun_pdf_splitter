@@ -13,8 +13,8 @@ from kobun.domain.pdf.value_objects.page_selection import PageSelection
 
 class SplitPdfUseCase:
     """
-    Orquesta la extracción de una selección de páginas hacia un PDF nuevo:
-    valida el origen, resuelve la ruta de destino y persiste el resultado.
+    Orchestrates extracting a page selection into a new PDF: validates the
+    source, resolves the destination path and persists the result.
     """
 
     def __init__(
@@ -29,10 +29,10 @@ class SplitPdfUseCase:
 
     def execute(self, request: SplitPdfRequest) -> SplitPdfResponse:
         """
-        :param request: Origen, selección de páginas, destino y política de
-            sobrescritura.
-        :return: Descripción completa de la operación, lista para mostrarse en
-            la UI y para registrarse en el historial.
+        :param request: Source, page selection, destination and overwrite
+            policy.
+        :return: A full description of the operation, ready to be shown in the
+            UI and recorded in the history.
         """
         document = self._pdf_repository.open_document(request.input_path)
 
@@ -64,17 +64,17 @@ class SplitPdfUseCase:
         directory: Optional[Path] = None,
     ) -> Path:
         """
-        Ruta que se usaría por defecto, para precargar el diálogo de guardado
-        de la UI. No toca el disco ni aplica política de sobrescritura.
+        The path that would be used by default, to prefill the UI's save
+        dialog. It touches no disk and applies no overwrite policy.
         """
         target_directory = directory or document.storage_path.parent
         return target_directory / self._pdf_service.suggest_output_filename(document, selection)
 
     def _resolve_output(self, document: PdfDocument, request: SplitPdfRequest) -> Path:
         """
-        La ruta se resuelve antes de marcar el documento como PROCESSING: si el
-        destino es inválido, la operación no llegó a empezar y el estado del
-        documento no debe reflejar un intento fallido.
+        The path is resolved before marking the document as PROCESSING: if the
+        destination is invalid the operation never started, and the document's
+        state must not reflect a failed attempt.
         """
         default_filename = self._pdf_service.suggest_output_filename(document, request.selection)
         requested = request.output_path or (document.storage_path.parent / default_filename)

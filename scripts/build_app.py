@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-Construye el ejecutable de Kobun para el sistema donde se lo ejecuta.
+Builds the Kobun executable for the system it runs on.
 
     ./.venv/bin/python scripts/build_app.py
     ./.venv/bin/python scripts/build_app.py --onedir
 
-PyInstaller **no compila cruzado**: el .exe de Windows hay que generarlo en
-Windows y el binario de Linux en Linux. Este script es el mismo en los dos; lo
-que cambia es dónde se corre.
+PyInstaller **does not cross-compile**: the Windows .exe has to be produced on
+Windows and the Linux binary on Linux. This script is the same on both; what
+changes is where it runs.
 
-Requiere el extra de construcción:
+Requires the build extra:
 
     pip install -e .[build]
 """
@@ -21,22 +21,22 @@ import sys
 import time
 from pathlib import Path
 
-RAIZ = Path(__file__).resolve().parent.parent
-SPEC = RAIZ / "packaging" / "kobun.spec"
-SALIDA = RAIZ / "dist"
-TRABAJO = RAIZ / "build"
+ROOT = Path(__file__).resolve().parent.parent
+SPEC = ROOT / "packaging" / "kobun.spec"
+OUTPUT_DIR = ROOT / "dist"
+WORK_DIR = ROOT / "build"
 
-NOMBRE_BINARIO = "kobun.exe" if sys.platform.startswith("win") else "kobun"
+BINARY_NAME = "kobun.exe" if sys.platform.startswith("win") else "kobun"
 
 
-def verificar_entorno() -> None:
+def check_environment() -> None:
     if not SPEC.is_file():
-        raise SystemExit(f"No se encuentra la receta: {SPEC}")
+        raise SystemExit(f"Recipe not found: {SPEC}")
 
     if shutil.which("pyinstaller") is None and not _pyinstaller_importable():
         raise SystemExit(
-            "PyInstaller no está instalado.\n"
-            "Instalalo con:  pip install -e .[build]"
+            "PyInstaller is not installed.\n"
+            "Install it with:  pip install -e .[build]"
         )
 
 
@@ -49,52 +49,52 @@ def _pyinstaller_importable() -> bool:
     return True
 
 
-def construir(onedir: bool, limpiar: bool) -> Path:
-    if limpiar:
-        for directorio in (SALIDA, TRABAJO):
-            if directorio.exists():
-                shutil.rmtree(directorio)
-                print(f"  limpiado {directorio.relative_to(RAIZ)}/")
+def build(onedir: bool, clean: bool) -> Path:
+    if clean:
+        for directory in (OUTPUT_DIR, WORK_DIR):
+            if directory.exists():
+                shutil.rmtree(directory)
+                print(f"  cleaned {directory.relative_to(ROOT)}/")
 
-    comando = [
+    command = [
         sys.executable, "-m", "PyInstaller",
         str(SPEC),
-        "--distpath", str(SALIDA),
-        "--workpath", str(TRABAJO),
+        "--distpath", str(OUTPUT_DIR),
+        "--workpath", str(WORK_DIR),
         "--noconfirm",
         "--log-level", "WARN",
     ]
 
-    # El flag --onedir no llega a un archivo .spec: la receta lee el modo del
-    # entorno. Pasarlo como flag no hacía nada.
-    entorno = dict(os.environ, KOBUN_ONEFILE="0" if onedir else "1")
+    # The --onedir flag never reaches a .spec file: the recipe reads the mode
+    # from the environment. Passing it as a flag did nothing.
+    environment = dict(os.environ, KOBUN_ONEFILE="0" if onedir else "1")
 
-    print(f"\nConstruyendo para {sys.platform} ({'directorio' if onedir else 'un solo archivo'})...")
-    inicio = time.monotonic()
-    resultado = subprocess.run(comando, cwd=RAIZ, env=entorno)
-    duracion = time.monotonic() - inicio
+    print(f"\nBuilding for {sys.platform} ({'directory' if onedir else 'single file'})...")
+    start = time.monotonic()
+    result = subprocess.run(command, cwd=ROOT, env=environment)
+    elapsed = time.monotonic() - start
 
-    if resultado.returncode != 0:
-        raise SystemExit(f"\nLa construcción falló (código {resultado.returncode}).")
+    if result.returncode != 0:
+        raise SystemExit(f"\nThe build failed (exit code {result.returncode}).")
 
-    print(f"Terminado en {duracion:.0f}s")
+    print(f"Finished in {elapsed:.0f}s")
 
-    return SALIDA / NOMBRE_BINARIO
+    return OUTPUT_DIR / BINARY_NAME
 
 
-def informar(binario: Path) -> None:
-    if binario.is_file():
-        mb = binario.stat().st_size / 1024 / 1024
-        print(f"\nEjecutable: {binario}  ({mb:.0f} MB)")
-    elif binario.parent.is_dir():
-        total = sum(f.stat().st_size for f in binario.parent.rglob("*") if f.is_file())
-        print(f"\nDirectorio: {binario.parent}  ({total / 1024 / 1024:.0f} MB)")
+def report(binary: Path) -> None:
+    if binary.is_file():
+        mb = binary.stat().st_size / 1024 / 1024
+        print(f"\nExecutable: {binary}  ({mb:.0f} MB)")
+    elif binary.parent.is_dir():
+        total = sum(f.stat().st_size for f in binary.parent.rglob("*") if f.is_file())
+        print(f"\nDirectory: {binary.parent}  ({total / 1024 / 1024:.0f} MB)")
     else:
-        raise SystemExit(f"\nNo se encontró la salida esperada en {binario}")
+        raise SystemExit(f"\nExpected output not found at {binary}")
 
     print(
-        "\nProbalo antes de distribuirlo: un ejecutable puede construirse sin "
-        "errores y fallar al arrancar por un módulo de Qt excluido de más."
+        "\nRun it before distributing it: an executable can build without errors "
+        "and still fail at startup because of a Qt module excluded too eagerly."
     )
 
 
@@ -102,16 +102,16 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--onedir", action="store_true",
-        help="Genera un directorio en vez de un único archivo (arranca más rápido)",
+        help="Produce a directory instead of a single file (starts faster)",
     )
     parser.add_argument(
         "--keep", action="store_true",
-        help="No borrar dist/ y build/ antes de construir",
+        help="Do not delete dist/ and build/ before building",
     )
     args = parser.parse_args()
 
-    verificar_entorno()
-    informar(construir(onedir=args.onedir, limpiar=not args.keep))
+    check_environment()
+    report(build(onedir=args.onedir, clean=not args.keep))
 
     return 0
 

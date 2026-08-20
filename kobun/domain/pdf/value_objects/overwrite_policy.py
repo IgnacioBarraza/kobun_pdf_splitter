@@ -3,17 +3,17 @@ from enum import Enum
 
 class OverwritePolicy(str, Enum):
     """
-    Qué hacer cuando el archivo de salida ya existe.
+    What to do when the output file already exists.
 
-    El default del sistema es FAIL: exportar nunca debe destruir un archivo
-    previo sin que alguien lo haya pedido explícitamente.
+    The system default is FAIL: exporting must never destroy an earlier file
+    unless someone explicitly asked for it.
     """
 
     FAIL = "fail"
-    """Aborta con InvalidOutputPathException."""
+    """Aborts with InvalidOutputPathException."""
 
     OVERWRITE = "overwrite"
-    """Reemplaza el archivo existente."""
+    """Replaces the existing file."""
 
     RENAME = "rename"
-    """Busca el primer nombre libre: book_1.pdf, book_2.pdf, ..."""
+    """Looks for the first free name: book_1.pdf, book_2.pdf, ..."""

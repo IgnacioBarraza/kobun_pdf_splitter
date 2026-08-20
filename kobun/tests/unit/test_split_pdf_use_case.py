@@ -20,8 +20,8 @@ from kobun.infrastructure.filesystem.local_file_storage import LocalFileStorage
 
 class FakePdfRepository(PdfRepository):
     """
-    Doble de prueba en memoria: permite testear la orquestación del use case
-    sin depender de PyMuPDF ni escribir PDFs reales.
+    In-memory test double: it allows testing the use case's orchestration
+    without depending on PyMuPDF or writing real PDFs.
     """
 
     def __init__(self, source: PdfDocument, result: PdfDocument, fail_on_split: bool = False):
@@ -112,44 +112,44 @@ def test_output_path_defaults_to_suggested_name_next_to_the_source(scenario):
 
 def test_explicit_output_file_is_respected(scenario, tmp_path):
     use_case, repository, source, _ = scenario()
-    destino = tmp_path / "mi_capitulo.pdf"
+    destination = tmp_path / "mi_capitulo.pdf"
 
-    use_case.execute(SplitPdfRequest(source.storage_path, PageSelection.parse("1-5"), output_path=destino))
+    use_case.execute(SplitPdfRequest(source.storage_path, PageSelection.parse("1-5"), output_path=destination))
 
-    assert repository.received_output == destino
+    assert repository.received_output == destination
 
 
 def test_output_directory_receives_the_suggested_filename(scenario, tmp_path):
     use_case, repository, source, _ = scenario()
-    directorio = tmp_path / "exports"
-    directorio.mkdir()
+    directory = tmp_path / "exports"
+    directory.mkdir()
 
-    use_case.execute(SplitPdfRequest(source.storage_path, PageSelection.parse("1-5"), output_path=directorio))
+    use_case.execute(SplitPdfRequest(source.storage_path, PageSelection.parse("1-5"), output_path=directory))
 
-    assert repository.received_output == directorio / "book_1-5.pdf"
+    assert repository.received_output == directory / "book_1-5.pdf"
 
 
 def test_existing_output_aborts_before_touching_the_document(scenario, tmp_path):
     use_case, repository, source, _ = scenario()
-    ocupado = tmp_path / "ocupado.pdf"
-    ocupado.write_bytes(b"previo")
+    taken = tmp_path / "ocupado.pdf"
+    taken.write_bytes(b"previo")
 
     with pytest.raises(InvalidOutputPathException, match="ya existe"):
-        use_case.execute(SplitPdfRequest(source.storage_path, PageSelection.parse("1-5"), output_path=ocupado))
+        use_case.execute(SplitPdfRequest(source.storage_path, PageSelection.parse("1-5"), output_path=taken))
 
-    assert source.status == PdfProcessingStatus.UPLOADED, "Una ruta inválida no es un intento fallido"
+    assert source.status == PdfProcessingStatus.UPLOADED, "An invalid path is not a failed attempt"
     assert repository.received_output is None
 
 
 def test_rename_policy_resolves_a_free_name(scenario, tmp_path):
     use_case, repository, source, _ = scenario()
-    ocupado = tmp_path / "ocupado.pdf"
-    ocupado.write_bytes(b"previo")
+    taken = tmp_path / "ocupado.pdf"
+    taken.write_bytes(b"previo")
 
     use_case.execute(SplitPdfRequest(
         source.storage_path,
         PageSelection.parse("1-5"),
-        output_path=ocupado,
+        output_path=taken,
         policy=OverwritePolicy.RENAME,
     ))
 

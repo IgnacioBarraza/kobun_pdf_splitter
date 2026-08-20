@@ -124,12 +124,12 @@ def test_directory_colliding_with_the_default_filename_is_rejected(resolver, sou
 
 def test_policy_accepts_its_plain_string_value(resolver, source, tmp_path):
     """
-    Regresión: Qt guarda el enum del combo como str plano, así que el resolver
-    debe reconocer "rename" igual que OverwritePolicy.RENAME. Con comparación
-    por identidad, elegir esa política desde la UI no hacía nada.
+    Regression: Qt stores the combo box's enum as a plain str, so the resolver
+    has to recognise "rename" just like OverwritePolicy.RENAME. With an identity
+    comparison, choosing that policy from the UI did nothing.
     """
     (tmp_path / "out.pdf").write_bytes(b"previo")
 
-    resuelto = resolver.resolve(tmp_path / "out.pdf", source, DEFAULT_NAME, "rename")
+    resolved = resolver.resolve(tmp_path / "out.pdf", source, DEFAULT_NAME, "rename")
 
-    assert resuelto == tmp_path / "out_1.pdf"
+    assert resolved == tmp_path / "out_1.pdf"

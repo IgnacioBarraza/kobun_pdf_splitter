@@ -37,11 +37,11 @@ def test_empty_history_when_file_does_not_exist(repository):
 
 
 def test_add_creates_the_file_and_its_directory(tmp_path):
-    repositorio = JsonHistoryRepository(tmp_path / "sub" / "dir" / "history.json")
+    repository = JsonHistoryRepository(tmp_path / "sub" / "dir" / "history.json")
 
-    repositorio.add(record())
+    repository.add(record())
 
-    assert repositorio.file_path.exists()
+    assert repository.file_path.exists()
 
 
 def test_records_come_back_newest_first(repository):
@@ -85,24 +85,24 @@ def test_round_trip_preserves_discontinuous_selections(repository):
 
 
 def test_old_entries_are_dropped_beyond_the_cap(tmp_path):
-    repositorio = JsonHistoryRepository(tmp_path / "history.json", max_entries=3)
+    repository = JsonHistoryRepository(tmp_path / "history.json", max_entries=3)
 
     for i in range(6):
-        repositorio.add(record(f"doc{i}"))
+        repository.add(record(f"doc{i}"))
 
-    guardados = repositorio.list_recent()
+    guardados = repository.list_recent()
 
     assert len(guardados) == 3
     assert [r.source_filename for r in guardados] == ["doc5.pdf", "doc4.pdf", "doc3.pdf"]
 
 
 def test_remove_deletes_only_the_requested_record(repository):
-    primero = record("primero")
-    segundo = record("segundo")
-    repository.add(primero)
-    repository.add(segundo)
+    first = record("primero")
+    second = record("segundo")
+    repository.add(first)
+    repository.add(second)
 
-    assert repository.remove(primero.id) is True
+    assert repository.remove(first.id) is True
     assert [r.source_filename for r in repository.list_recent()] == ["segundo.pdf"]
 
 
