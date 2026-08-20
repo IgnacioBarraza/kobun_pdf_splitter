@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.2.0 (2026-08-20)
+
+### Refactoring
+
+- Update project description to English for consistency
+  ([`dbfe5cd`](https://github.com/IgnacioBarraza/kobun_pdf_splitter/commit/dbfe5cda4c1504286ed06bb580fc55f909c52f23))
+
+
 ## v0.2.0-alpha.2 (2026-08-20)
 
 ### Features
