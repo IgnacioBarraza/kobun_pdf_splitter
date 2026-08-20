@@ -1,17 +1,66 @@
-# Kobun – PDF Desktop Utility
+# Kobun — PDF Desktop Utility
 
-## 📖 Overview
+[![ci](https://github.com/IgnacioBarraza/kobun/actions/workflows/ci.yml/badge.svg)](https://github.com/IgnacioBarraza/kobun/actions/workflows/ci.yml)
+[![release](https://img.shields.io/github/v/release/IgnacioBarraza/kobun?include_prereleases&sort=semver)](https://github.com/IgnacioBarraza/kobun/releases/latest)
+![python](https://img.shields.io/badge/python-3.10%2B-blue)
+[![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-**Kobun** is a desktop utility for splitting PDF files by page ranges, designed with a clean architecture and a strong separation between domain logic and UI concerns.
+Desktop utility that extracts page ranges from a PDF — **including
+discontinuous ones, like `1-5,10-15,20`** — into a new file, without touching
+the original. Built for the case that PDF viewers handle badly: pulling three
+chapters out of a 600 page book in one pass.
 
-The application enables users to reorganize large PDF documents — such as academic books, technical manuals, or research material — into smaller, well-defined sections.
+Written in Python with **PySide6 (Qt)** and **PyMuPDF**, on a layered
+architecture where the domain knows neither of them: **3,500 lines of code held
+up by 2,700 of tests, 346 of which run with no dependencies installed at all.**
 
-The project emphasizes:
+|                                                           |                                                             |
+| --------------------------------------------------------- | ----------------------------------------------------------- |
+| ![Kobun, light theme](assets/screenshots/split-light.png) | ![Kobun, yozora theme](assets/screenshots/split-yozora.png) |
 
-- Clear domain modeling
-- Framework-independent business rules
-- Maintainable layered architecture
-- Modern Qt-based desktop interface
+<!--
+The two captures above are placeholders taken headless, so they show an empty
+window. Replace the files with real ones —a PDF loaded, a range typed, the
+history with actual exports— keeping the same names:
+    assets/screenshots/split-light.png
+    assets/screenshots/split-yozora.png
+    assets/screenshots/history-yozora.png
+-->
+
+---
+
+## ⬇️ Download
+
+Grab the latest build from the [releases page](https://github.com/IgnacioBarraza/kobun/releases/latest).
+Versions tagged as pre-release come from `develop` and are meant for trying
+changes early; the definitive ones come from `main`.
+
+### Windows
+
+`kobun.exe` is **portable**: download it and open it, there is nothing to
+install. Windows will warn about an unsigned executable the first time.
+
+### Linux
+
+The `.deb` is the recommended route — it installs Kobun into the application
+menu with its icon:
+
+```bash
+sudo apt install ./kobun_*_amd64.deb
+```
+
+The standalone `kobun` binary works on other distributions, with two caveats:
+you have to make it executable with `chmod +x` (the download loses that bit),
+and **modern file managers will not launch a binary on double click**, so run it
+from a terminal.
+
+### From source
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+kobun
+```
 
 ---
 
@@ -23,12 +72,11 @@ The project emphasizes:
 - Overlapping or adjacent ranges are merged automatically — no duplicate pages
 - Page indices are 1-based and inclusive, as printed in the document
 - Output metadata derived from the source document, traceable back to it
-- PDF processing powered by **PyMuPDF**
 
 ### Choosing where it lands
 
 - Suggested output filename: `book.pdf` + `1-5,10-15` → `book_1-5_10-15.pdf`,
-  sanitized for Windows/macOS/Linux
+  sanitized for Windows/Linux
 - The destination field asks for a filename; the folder is shown separately
 - Output never overwrites silently — `OverwritePolicy` (`FAIL` / `OVERWRITE` /
   `RENAME`) — and never writes over the source file
@@ -42,8 +90,8 @@ The project emphasizes:
 
 ### Interface
 
-- Desktop interface built with **PySide6 (Qt for Python)**
-- Drag & drop, or pick a file from the system dialog
+- Drag & drop, or pick a file from the system dialog. It also opens a PDF passed
+  on the command line or chosen through the desktop's "Open with"
 - Long operations run on a worker thread, so the window never freezes
 - Expected errors are reported as warnings; unexpected ones show a generic
   message and keep the technical detail for reporting
@@ -56,13 +104,14 @@ The project emphasizes:
 - Persistent history of the last 50 exports, stored per-OS in the user's data
   directory
 - Entries whose file was moved or deleted are flagged, not dropped
-- Open an exported PDF with the system viewer, straight from the list
+- Open an exported PDF with the system viewer, or drop a single entry, straight
+  from the list
 
 ---
 
 ## 🧱 Architecture
 
-Kobun follows a layered structure inspired by Domain-Driven Design (DDD):
+Kobun follows a layered structure inspired by Domain-Driven Design:
 
 ```
 kobun/
@@ -74,302 +123,39 @@ kobun/
 ├── shared/         # Cross-cutting concerns (themes, settings, icons)
 └── tests/          # unit/ (no dependencies) and integration/ (real PDFs, real window)
 
-assets/             # Source artwork, not shipped with the package
-docs/               # changelog.md, written by semantic-release on every release
+assets/             # Source artwork and screenshots, not shipped with the package
+docs/               # Development and release documentation, plus the changelog
 scripts/            # Build, packaging, release and desktop integration helpers
+packaging/          # PyInstaller recipe and Inno Setup script
 ```
 
-### Architectural Principles
+**Principles that are actually enforced, not just stated:**
 
-- Immutable Value Objects
-- Explicit domain exceptions
-- No framework leakage into the domain layer
-- Deterministic validation of page ranges
-- Clear dependency direction (outer layers depend on inner layers)
+- Immutable Value Objects, validated on construction and kept in canonical
+  form — two selections covering the same pages are equal
+- Explicit domain exceptions; the repository guarantees no PyMuPDF error escapes
 - **Page indices are 1-based everywhere** — from `PageRange` up to the UI. The
-  translation to PyMuPDF's 0-based API happens only inside `PdfEngineAdapter`.
-- The UI knows no use cases: the window talks to a viewmodel, and the
-  viewmodel is the only thing that touches the application layer.
-
----
-
-## 🛠 Requirements
-
-- Python **3.10+**
-- pip
-
-Install dependencies:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-That installs the project in editable mode with its development extras.
-`requirements.txt` only points at `pyproject.toml`, which is the single source
-of truth for dependencies.
-
-Once installed, the `kobun` command is available:
-
-```bash
-kobun                    # opens the window
-kobun path/to/book.pdf   # opens it with that document loaded
-```
-
----
-
-## 🚀 Running the Application
-
-```bash
-kobun                    # if the project is installed
-./.venv/bin/python main.py   # straight from the source tree
-```
-
-Both accept a PDF as an argument, which is also how the desktop passes the file
-when Kobun is chosen from "Open with".
-
-### Desktop integration on Linux (optional)
-
-On Wayland the compositor does not read the icon from the window: it matches
-the application to a `.desktop` file through its app id. Without that file the
-dock shows a generic Python icon.
-
-```bash
-./.venv/bin/python scripts/install_desktop_entry.py
-```
-
-This installs the icons into `~/.local/share/icons/hicolor` and the entry into
-`~/.local/share/applications`, with no root required. Kobun then appears in the
-application menu too. Use `--uninstall` to undo it.
-
----
-
-## 📦 Building an executable
-
-```bash
-pip install -e .[build]
-python scripts/build_app.py            # single file, easiest to distribute
-python scripts/build_app.py --onedir    # a folder, starts faster
-```
-
-The recipe lives in [`packaging/kobun.spec`](packaging/kobun.spec) and is shared
-by both platforms. **PyInstaller does not cross-compile**: the Linux binary must
-be built on Linux and the Windows `.exe` on Windows (or in CI).
-
-A build that succeeds is not a build that works — a Qt module excluded too
-aggressively only fails at startup. Always launch the result before shipping it.
-
-| | Linux | Windows |
-|---|---|---|
-| Output | `dist/kobun` | `dist/kobun.exe` |
-| Size | ~93 MB (one file) | similar |
-| Installer | `.deb` (see below) | Inno Setup (see below) |
-| Icon | resolved by the desktop from the `.desktop` entry | embedded in the `.exe` |
-| Console window | n/a | none (`console=False`) |
-
-Released files are named `kobun`, `kobun.exe` and `kobun_<version>_amd64.deb`.
-The version is not in the first two names because the app shows it in its own
-sidebar; the `.deb` keeps the Debian convention because tooling expects it.
-
-On Linux, point the desktop entry at the built binary instead of the
-development environment:
-
-```bash
-python scripts/install_desktop_entry.py --exec dist/kobun
-```
-
-### Linux package
-
-A bare executable is not a usable distribution format on Linux: modern file
-managers refuse to launch binaries on double-click, and downloading one loses
-its executable bit. The `.deb` is the Linux counterpart of the Windows
-installer — it puts the binary in `/usr/bin`, registers the `.desktop` entry and
-the icons, and shows up in the application menu.
-
-```bash
-python scripts/build_app.py
-python scripts/build_deb.py
-sudo apt install ./dist/kobun_*_amd64.deb
-```
-
-Its dependencies were not guessed: they come from walking the `NEEDED` entries
-of every library in the Qt bundle and mapping what is missing to packages.
-
-### Getting the Windows `.exe` without a Windows machine
-
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs the test suite, then
-builds both binaries on their own runners and uploads them as artifacts, so you
-can try a branch's build without releasing anything. Merging into `develop` or
-`main` publishes them instead — see [Publishing a release](#publishing-a-release).
-
-### Windows installer
-
-The `.exe` is **portable**: it runs on double-click, with no installation. What
-it does not give you is a Start menu shortcut, a PDF association or an entry in
-Add/Remove Programs. That is what [`packaging/kobun.iss`](packaging/kobun.iss)
-adds, via Inno Setup:
-
-```bat
-python scripts\build_app.py
-iscc packaging\kobun.iss
-```
-
-It installs per-user, so no UAC prompt, and it registers Kobun as an *option*
-for PDFs rather than stealing the default association from whatever viewer is
-already installed.
-
-Note that an unsigned executable downloaded from the internet triggers a
-SmartScreen warning on first run. Removing it requires a code-signing
-certificate.
-
-### What CI is made of
-
-Split by responsibility, so that a change to one concern touches one file:
-
-| File | Responsibility |
-|---|---|
-| [`workflows/ci.yml`](.github/workflows/ci.yml) | is the code healthy? Tests + a build that proves the binary still comes out |
-| [`workflows/release.yml`](.github/workflows/release.yml) | publish: version, changelog, release, binaries attached |
-| [`workflows/tests.yml`](.github/workflows/tests.yml) | the suite itself, called by both — one definition, so what runs before a release is what ran on the PR |
-| [`actions/python-env`](.github/actions/python-env/action.yml) | Python, Qt's system libraries, the project installed |
-| [`actions/build-app`](.github/actions/build-app/action.yml) | the binary, the `.deb`, and the size check that catches a build missing its dependencies |
-
-Pushes to `main` and `develop` are deliberately excluded from `ci.yml`:
-`release.yml` calls the same test suite before versioning, so including them
-would run everything twice per merge.
-
-The two composite actions exist because their steps were repeated across jobs —
-installing Qt's libraries appeared three times, building appeared twice. Adding
-a system library is now one edit rather than a hunt.
-
-### Publishing a release
-
-Nothing is tagged by hand. The version comes from the commits, through
-[python-semantic-release](https://python-semantic-release.readthedocs.io/),
-configured under `[tool.semantic_release]` in
-[`pyproject.toml`](pyproject.toml). Push to a release branch and the pipeline
-decides whether there is a version to publish, and which one:
-
-| Commit prefix | Effect on the version |
-|---|---|
-| `feat:` | minor — `0.1.0` → `0.2.0` |
-| `fix:` `perf:` | patch — `0.1.0` → `0.1.1` |
-| `feat!:` or `BREAKING CHANGE:` | minor while below 1.0.0 (`major_on_zero = false`) |
-| `docs:` `chore:` `ci:` `refactor:` `test:` `style:` `build:` | nothing — no release |
-
-Two branches release:
-
-| Branch | Version | GitHub release |
-|---|---|---|
-| `develop` | `0.2.0-alpha.1`, `.2`, … | marked **pre-release** |
-| `main` | `0.2.0` | the definitive one |
-
-So a merge into `develop` gives you installable binaries to try before the
-version is final, and the merge from `develop` into `main` turns the accumulated
-alphas into the stable release.
-
-When there is something to publish, the pipeline bumps `__version__` in
-[`kobun/__init__.py`](kobun/__init__.py), inserts the entry into
-[`docs/changelog.md`](docs/changelog.md), commits that as
-`chore(release): vX.Y.Z [skip ci]`, tags it, creates the release, and only then
-builds the binaries from the tag and attaches them. Nothing to publish means
-nothing happens — no empty release, no tag.
-
-**Preview what a release would say**, before pushing anything:
-
-```bash
-pip install -e .[release]
-semantic-release version --print          # the next version, or the current one if none
-python3 scripts/release_notes.py v0.2.0   # the release body, once the tag exists
-```
-
-#### After a definitive release
-
-A release writes a real commit —the version bump plus the changelog entry— on
-the branch it publishes from. After releasing from `main`, that leaves `main` one
-commit ahead of `develop`, on three files nobody edits by hand
-(`kobun/__init__.py`, `packaging/kobun.iss`, `docs/changelog.md`). Left alone,
-the next `develop` → `main` pull request conflicts on all three, and resolving it
-the wrong way walks the published version backwards.
-
-The `back-merge` job merges `main` into `develop` right after a definitive
-release, so `develop` carries the version it just published and the next pull
-request has nothing to conflict on. It runs only for definitive releases —a
-prerelease publishes from `develop` itself, so there is nothing to bring back—
-and shares the `release` concurrency group so a prerelease cannot interleave
-with the merge. If the merge does conflict, the job fails with the command to
-resolve it by hand rather than forcing anything.
-
-#### The release bot
-
-The release commit lands on a protected branch, and `GITHUB_TOKEN` cannot push
-there — a ruleset only exempts named actors. So the versioning job authenticates
-as a GitHub App, **kobun-release-bot**, which the ruleset lists as a bypass
-actor. [`actions/create-github-app-token`](https://github.com/actions/create-github-app-token)
-exchanges the app's private key for an installation token that lives for an hour.
-
-What the repository has to provide, both scoped to the **`KOBUN_RELEASE`**
-environment — which is why the versioning job declares `environment:
-KOBUN_RELEASE`. A job that does not declare it sees them as empty, and the token
-step fails with `appId option is required`:
-
-| Where | Name | What it is |
-|---|---|---|
-| Environment variable | `APP_ID` | the App's numeric ID |
-| Environment secret | `APP_PRIVATE_KEY` | the `.pem` private key, whole file including the BEGIN/END lines |
-
-The App needs **Contents: Read and write** (pushing, tagging and creating
-releases all live under that permission), has to be installed on this
-repository, and has to appear in the bypass list of the branch ruleset.
-
-One consequence worth knowing: a push made with `GITHUB_TOKEN` never triggers
-workflows, but **a push made with an App token does**. The release commit would
-therefore start another run of this same workflow. Two things prevent the loop —
-the `[skip ci]` that `commit_message` puts in the commit, and the
-`github.actor != 'kobun-release-bot[bot]'` guard on the job.
-
-Uploading the binaries does not need the App: attaching an asset to a release
-touches no branch, so the ruleset never sees it and `GITHUB_TOKEN` is enough.
-
-#### Two documents, on purpose
-
-[`docs/changelog.md`](docs/changelog.md) is the **record**: every version, in
-semantic-release's own format, written by the tool.
-
-The GitHub release body is the **shop window**, written by
-[`scripts/release_notes.py`](scripts/release_notes.py): it leads with the
-install instructions, groups changes under plain headings (*New*, *Fixes*,
-*Performance*), folds `refactor:`/`chore:`/`ci:` away in a `<details>`, and warns
-when the download is a pre-release.
-
-It also fixes something the record cannot: semantic-release attributes each
-commit to the tag that first published it, so a stable release that follows a
-string of alphas has **nothing left of its own** and its notes come out empty.
-The generator compares a definitive version against the last definitive
-version — not against the last alpha — so the release that people actually
-download lists everything that changed since the previous one they had.
-
-Commits that do not follow the convention are never dropped from the notes: they
-land in *Other changes*. They just do not move the version.
+  translation to PyMuPDF's 0-based API happens only inside `PdfEngineAdapter`
+- The UI knows no use cases: the window talks to a viewmodel, and the viewmodel
+  is the only thing that touches the application layer
+- The `unit/` suite runs without PySide6 or PyMuPDF installed, and CI fails if
+  that stops being true — which is what keeps the domain framework-free
 
 ---
 
 ## 🧪 Tests
 
 ```bash
-pytest                        # everything (testpaths is configured)
-pytest kobun/tests/unit       # pure domain, no dependencies
+pytest                    # everything
+pytest kobun/tests/unit   # pure domain, no dependencies
 ```
 
-The `unit/` suite runs with nothing but pytest installed. The `integration/`
-suite generates real PDFs with PyMuPDF and drives the real Qt window in
-offscreen mode, checking that exactly the requested pages come out; it skips
-itself when PyMuPDF or PySide6 are missing.
+Details, and everything about building and releasing, live in
+[`docs/development.md`](docs/development.md).
 
 ---
 
-## 📂 Example Workflow
+## 📂 Example
 
 1. Drop `book.pdf` on the window
 2. Enter a page selection: `25-40`, or `1-5,10-15,20` for several sections at once
@@ -394,54 +180,55 @@ record_use_case.execute(response)                        # add it to the history
 
 ---
 
-[//]: # (## 🌐 Landing Page)
-
-[//]: # ()
-[//]: # (For documentation, roadmap updates, and project vision:)
-
-[//]: # ()
-[//]: # (👉 **Visit the official Kobun landing page:**  )
-
-[//]: # (https://your-landing-page-url.com)
-
-[//]: # (---)
-
 ## 🛣 Roadmap
 
-- [x] Multiple range support (e.g., `1-5,10-15`)
-- [x] Automated tests for domain layer
-- [x] Output path selection with overwrite policy
+Done:
+
+- [x] Multiple range support (`1-5,10-15`), merged and canonicalised
+- [x] Output path selection with an overwrite policy
 - [x] Export history
-- [x] Qt UI wired to the use cases
-- [x] Light / dark theme system
-- [ ] Page preview before splitting
-- [ ] Batch splitting
-- [ ] CLI version
+- [x] Qt UI wired to the use cases through a viewmodel
+- [x] Light / dark theme system — 10 palettes, contrast verified by tests
 - [x] Installable package with a `kobun` entry point
-- [ ] Cross-platform packaging (Windows / macOS / Linux)
-- [ ] Installer distribution
+- [x] Windows and Linux packaging: portable `.exe`, `.deb`, Inno Setup installer
+- [x] Automated versioning, changelog and releases derived from the commits
+
+Next:
+
+- [ ] Page preview before splitting
+- [ ] Live page count while typing a selection
+- [ ] Repeat an export from the history (the selection is already stored as a
+      Value Object precisely for this)
+- [ ] Merge PDFs and extract text — implemented in the repository layer, not yet
+      exposed in the interface
+- [ ] Batch splitting
+- [ ] A CLI alongside the window
+- [ ] Code signing for Windows, to drop the SmartScreen warning
+- [ ] macOS build, once there is a machine to verify it on
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome.
+Contributions are welcome. Fork, branch, and open a pull request with a clear
+technical description.
 
-1. Fork the repository
-2. Create a feature branch
-3. Follow clean code and architectural boundaries
-4. Submit a pull request with a clear technical description
+Two conventions worth knowing before the first commit:
 
-Please ensure:
+- **Commits follow [Conventional Commits](https://www.conventionalcommits.org/)**,
+  and they decide the version. `feat:` publishes a minor, `fix:` a patch, and a
+  commit with no `type:` prefix publishes nothing at all — see
+  [`docs/releasing.md`](docs/releasing.md)
+- **Code and comments are in English; the interface is in Spanish.** That
+  includes the messages of domain exceptions, which the UI shows to the user
+  verbatim
 
-- Domain logic remains UI-agnostic
-- New features include validation and explicit error handling
-- Layer boundaries are respected
-- The `unit/` suite still runs without PyMuPDF or PySide6 installed
+And please keep the boundaries the project is built on: domain logic stays
+UI-agnostic, new features come with validation and explicit error handling, and
+the `unit/` suite must still run without PyMuPDF or PySide6 installed.
 
 ---
 
 ## 📄 License
 
-Released under the MIT License.  
-See `LICENSE` for details.
+Released under the MIT License. See [`LICENSE`](LICENSE) for details.

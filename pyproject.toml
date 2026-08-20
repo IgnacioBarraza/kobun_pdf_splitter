@@ -80,7 +80,7 @@ version_variables = [
     # The Windows installer declares its own version, and falling behind is not
     # noticed until someone installs a setup labelled with an old one. The pattern
     # accepts C-macro style definitions, so #define is enough.
-    "packaging/kobun.iss:MiVersion",
+    "packaging/kobun.iss:MyAppVersion",
 ]
 tag_format = "v{version}"
 
